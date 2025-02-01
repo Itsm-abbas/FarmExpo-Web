@@ -1,0 +1,130 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import font from "@utils/fonts";
+import { FaBars, FaTimes } from "react-icons/fa";
+import ThemeToggle from "../ThemeToggle";
+import Sidebar from "../Siderbar";
+import { motion, AnimatePresence } from "framer-motion";
+
+export default function Header() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null); // Added ref for dropdown
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  return (
+    <>
+      {/* Header */}
+      <motion.div
+        className="bg-white dark:bg-gray-900 text-black dark:text-white sticky top-0 left-0 right-0 z-50 shadow-lg w-full flex items-center justify-between py-4 px-5 sm:px-8 md:px-16"
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3
+          className={`${font.montserrat.className} font-medium flex gap-16 items-center text-2xl max-sm:text-[18px]`}
+        >
+          <Link href={"/"}>
+            <p className="hidden md:flex gap-1 items-center">
+              <motion.span
+                className="text-PrimaryButton text-3xl"
+                whileHover={{ scale: 1.1 }}
+              >
+                Farm
+              </motion.span>
+              <motion.span
+                className="text-LightPText dark:text-DarkPText text-2xl"
+                whileHover={{ scale: 1.1 }}
+              >
+                Expo
+              </motion.span>
+            </p>
+          </Link>
+          <motion.button
+            onClick={toggleSidebar}
+            className={`text-white text-xl bg-PrimaryButton px-4 py-2 rounded-md hidden md:block ml-6`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {isSidebarOpen ? <FaTimes /> : <FaBars />}
+          </motion.button>
+        </h3>
+
+        <ThemeToggle />
+
+        <div className="flex gap-8 max-sm:gap-4 relative" ref={dropdownRef}>
+          <motion.button
+            className={`${font.poppins.className} text-white flex items-center gap-3 bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 pr-6 rounded-l-full rounded-r-full`}
+            onClick={toggleDropdown}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Image
+              className="rounded-full border-2 border-white"
+              src="/profile.png"
+              width={40}
+              height={40}
+              alt="profile"
+            />
+            <p>Abbas</p>
+          </motion.button>
+
+          {/* Profile Dropdown */}
+          <AnimatePresence>
+            {isDropdownOpen && (
+              <motion.div
+                className="absolute right-0 top-14 bg-white dark:bg-DarkSBg shadow-lg rounded-md w-48 p-2 text-black dark:text-white"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link
+                  onClick={() => setIsDropdownOpen(false)}
+                  href="/profile"
+                  className="block px-4 py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
+                >
+                  Profile Settings
+                </Link>
+                <button
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="block w-full text-left px-4 py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
+                >
+                  Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* Sidebar */}
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+    </>
+  );
+}
