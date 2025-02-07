@@ -31,7 +31,7 @@ export default function ThemeToggle() {
             >
               <FaMoon className="text-purple-600" />
             </motion.div>
-            <span>Switch to Dark</span>
+            <span className="hidden md:block">Switch to Dark</span>
           </>
         ) : (
           <>
@@ -42,7 +42,7 @@ export default function ThemeToggle() {
             >
               <FaSun className="text-yellow-400" />
             </motion.div>
-            <span>Switch to Light</span>
+            <span className="hidden md:block">Switch to Light</span>
           </>
         )}
       </motion.button>

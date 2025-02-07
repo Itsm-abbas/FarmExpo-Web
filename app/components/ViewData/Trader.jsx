@@ -36,7 +36,7 @@ const ViewTrader = () => {
           method: "DELETE",
         });
         if (!response.ok) {
-          throw new Error("Failed to delete Trader.");
+          throw new Error(`Error: ${response.status} - ${response.statusText}`);
         }
         Swal.fire({
           position: "top-center",

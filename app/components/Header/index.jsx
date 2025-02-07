@@ -43,8 +43,8 @@ export default function Header() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h3
-          className={`${font.montserrat.className} font-medium flex gap-16 items-center text-2xl max-sm:text-[18px]`}
+        <div
+          className={`${font.montserrat.className} font-medium md:flex gap-16 items-center text-2xl max-sm:text-[18px]`}
         >
           <Link href={"/"}>
             <p className="hidden md:flex gap-1 items-center">
@@ -64,19 +64,19 @@ export default function Header() {
           </Link>
           <motion.button
             onClick={toggleSidebar}
-            className={`text-white text-xl bg-PrimaryButton px-4 py-2 rounded-md hidden md:block ml-6`}
+            className={`text-white md:text-xl bg-PrimaryButton px-4 py-2 rounded-md block md:ml-6`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
             {isSidebarOpen ? <FaTimes /> : <FaBars />}
           </motion.button>
-        </h3>
+        </div>
 
         <ThemeToggle />
 
         <div className="flex gap-8 max-sm:gap-4 relative" ref={dropdownRef}>
           <motion.button
-            className={`${font.poppins.className} text-white flex items-center gap-3 bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 pr-6 rounded-l-full rounded-r-full`}
+            className={`${font.poppins.className} text-white flex items-center gap-3 md:bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 md:pr-6 rounded-l-full rounded-r-full`}
             onClick={toggleDropdown}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -88,7 +88,7 @@ export default function Header() {
               height={40}
               alt="profile"
             />
-            <p>Abbas</p>
+            <p className="hidden md:block">Abbas</p>
           </motion.button>
 
           {/* Profile Dropdown */}

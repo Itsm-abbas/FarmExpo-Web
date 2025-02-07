@@ -7,8 +7,10 @@ import Input from "@components/Input";
 import { FaPlus } from "react-icons/fa";
 import fonts from "@utils/fonts";
 import { useRouter } from "next/navigation";
-
+import { useSearchParams } from "next/navigation";
 export default function ConsignmentItemForm({ consignmentId }) {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id"); // Extract the ID from query params
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -48,7 +50,25 @@ export default function ConsignmentItemForm({ consignmentId }) {
       setFormData({ ...formData, item: selectedItem });
     }
   };
-
+  useEffect(() => {
+    if (id) {
+      // Fetch the existing consingee data
+      const fetchConsignmentItem = async () => {
+        try {
+          const response = await fetch(`${apiUrl}/consignmentitem/${id}`);
+          const data = await response.json();
+          setFormData(data);
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Failed to fetch consignmentitem details.",
+          });
+        }
+      };
+      fetchConsignmentItem();
+    }
+  }, [id]);
   // Fetch items and packaging data
   useEffect(() => {
     const fetchData = async () => {
@@ -77,22 +97,22 @@ export default function ConsignmentItemForm({ consignmentId }) {
 
   const handleSubmit = async () => {
     // Validation to ensure all fields are filled
-    if (
-      !formData.item ||
-      !formData.packaging ||
-      !formData.weightPerUnit ||
-      !formData.commodityPerUnitCost ||
-      !formData.packagingPerUnitCost ||
-      !formData.quantity ||
-      !formData.damage
-    ) {
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Please fill in all fields.",
-      });
-      return;
-    }
+    // if (
+    //   !formData.item ||
+    //   !formData.packaging ||
+    //   !formData.weightPerUnit ||
+    //   !formData.commodityPerUnitCost ||
+    //   !formData.packagingPerUnitCost ||
+    //   !formData.quantity ||
+    //   !formData.damage
+    // ) {
+    //   Swal.fire({
+    //     icon: "error",
+    //     title: "Oops...",
+    //     text: "Please fill in all fields.",
+    //   });
+    //   return;
+    // }
 
     // Prepare payload to send
     const payload = {
@@ -104,38 +124,44 @@ export default function ConsignmentItemForm({ consignmentId }) {
       quantity: formData.quantity,
       damage: formData.damage,
     };
-    console.log(formData);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${apiUrl}/consignmentitem`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const method = id ? "PUT" : "POST";
+      const url = id
+        ? `${apiUrl}/consignmentitem/${id}`
+        : `${apiUrl}/consignmentitem`;
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save consignment item.");
+        throw new Error(`Error: ${response.status} - ${response.statusText}`);
       }
-
-      Swal.fire({
+      const result = await Swal.fire({
         icon: "success",
         title: "Success",
-        text: "Consignment item added successfully!",
+        text: id
+          ? "consignmentitem updated successfully."
+          : "consignmentitem added successfully.",
       });
-
-      // Reset the form
-      setFormData({
-        item: null,
-        packaging: null,
-        weightPerUnit: "",
-        commodityPerUnitCost: "",
-        packagingPerUnitCost: "",
-        quantity: "",
-        damage: "",
-      });
+      if (response.ok) {
+        setFormData({
+          item: null,
+          packaging: null,
+          weightPerUnit: "",
+          commodityPerUnitCost: "",
+          packagingPerUnitCost: "",
+          quantity: "",
+          damage: "",
+        }); // Clear form for new entry
+      }
+      if (result.isConfirmed) {
+        router.push("view-consignmentitem");
+      }
     } catch (error) {
       Swal.fire({
         icon: "error",

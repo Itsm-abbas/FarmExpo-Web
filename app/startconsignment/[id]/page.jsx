@@ -2,19 +2,26 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import ConsigneeForm from "@forms/Consignee";
+import ConsigneeForm from "@components/Forms/StartConsignment/Consignee";
 import TraderForm from "@components/Forms/StartConsignment/Trader";
 import AirwayBill from "@components/Forms/StartConsignment/AirwayBill";
 import CustomClearence from "@forms/StartConsignment/CustomClearance";
 import Packing from "@components/Forms/StartConsignment/Packing";
 import RecoveryDoneForm from "@components/Forms/StartConsignment/RecoveryDone";
-import { FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaCheck,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
 import GoodsDeclarationForm from "@forms/StartConsignment/GoodsDeclaration";
 import Swal from "sweetalert2";
 import font from "@utils/fonts";
 import Link from "next/link";
 import DamageForm from "@components/Forms/StartConsignment/Damage";
 import { motion, AnimatePresence } from "framer-motion";
+import PackagingForm from "@components/Forms/StartConsignment/Packaging";
+import DataLoader from "@components/Loader/dataLoader";
 
 const formsData = [
   { id: 1, name: "Consignee", component: ConsigneeForm, key: "consignee" },
@@ -34,6 +41,12 @@ const formsData = [
   },
   { id: 6, name: "Packing", component: Packing, key: "packing" },
   {
+    id: 9,
+    name: "Packaging",
+    component: PackagingForm,
+    key: "goods",
+  },
+  {
     id: 7,
     name: "Recovery",
     component: RecoveryDoneForm,
@@ -43,7 +56,7 @@ const formsData = [
     id: 8,
     name: "Damage",
     component: DamageForm,
-    key: "damage",
+    key: "goods",
   },
 ];
 
@@ -53,7 +66,7 @@ export default function StartConsignmentPage() {
   const [formStatuses, setFormStatuses] = useState({});
   const [activeAccordion, setActiveAccordion] = useState(null);
   const accordionRefs = useRef({}); // Store refs for each accordion
-
+  const [itemsLength, setItemsLength] = useState(0);
   const fetchFormStatuses = async () => {
     try {
       const response = await fetch(
@@ -61,6 +74,7 @@ export default function StartConsignmentPage() {
       );
       const data = await response.json();
       setFormStatuses(data);
+      setItemsLength(data.goods.length);
     } catch (error) {
       console.error("Error fetching statuses:", error);
     }
@@ -94,15 +108,29 @@ export default function StartConsignmentPage() {
         <div className="flex justify-center">
           {/* Consignment items */}
           <Link href={`/items-selection/${consignmentId}`}>
-            <button className="px-4 py-2 bg-SecondaryButton rounded-sm text-white capitalize">
-              Click to add or update consignment items
+            <button
+              className={`px-6 py-3 rounded-lg text-white capitalize font-medium transition-all duration-300 ${
+                itemsLength > 0
+                  ? "bg-blue-500 hover:bg-blue-600"
+                  : "bg-SecondaryButton hover:bg-SecondaryButtonHover"
+              }`}
+            >
+              {itemsLength > 0
+                ? "Click to update consignment items"
+                : "Click to add consignment items"}
             </button>
           </Link>
         </div>
         {/* Accordion */}
         {formsData.map((form) => {
           const FormComponent = form.component;
-          const isSubmitted = formStatuses[form.key];
+          // const isSubmitted = formStatuses[form.key];
+          const isSubmitted =
+            form.key === "goods"
+              ? formStatuses.goods?.some(
+                  (item) => item?.damage || item?.packaging
+                )
+              : formStatuses[form.key];
           return (
             <div
               key={form.id}
@@ -166,6 +194,13 @@ export default function StartConsignmentPage() {
             </div>
           );
         })}
+        <div className="flex justify-end mt-4">
+          <Link href={`/invoice/${consignmentId}`}>
+            <button className="px-4 py-2 flex items-center gap-2 bg-purple-600 text-white font-semibold rounded-sm shadow-md hover:bg-purple-700 transition">
+              Generate Invoice <FaArrowRight />
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );

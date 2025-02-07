@@ -5,6 +5,8 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
+import { motion } from "framer-motion";
+import moment from "moment";
 const MySwal = withReactContent(Swal);
 export default function AirwayBill({
   consignmentId,
@@ -13,7 +15,7 @@ export default function AirwayBill({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const [number, setNumber] = useState("");
+  const [Billnumber, setBillNumber] = useState("");
   const [rate, setRate] = useState("");
   const [airwayBillWeight, setAirwayBillWeight] = useState("");
   const [fee, setFee] = useState("");
@@ -34,21 +36,20 @@ export default function AirwayBill({
     setDate(selectedDate);
     setFormattedDate(selectedDate.toISOString().split("T")[0]);
   };
-
   // When an agent is selected
   const handleSelectAgent = (agentDetail) => {
     setSelectedAgent(agentDetail);
     setShowDropdown(false); // Close dropdown
   };
-
   // Save Data
+
   const handleSubmit = async () => {
     if (
-      !number ||
+      !Billnumber ||
       !fee ||
       !rate ||
       !airwayBillWeight ||
-      selectedAgent === undefined
+      selectedAgent === null
     ) {
       MySwal.fire({
         icon: "error",
@@ -59,10 +60,11 @@ export default function AirwayBill({
     }
     if (existingData) {
       if (
-        formData.ntn === existingData.ntn &&
-        formData.name === existingData.name &&
-        formData.address === existingData.address &&
-        formData.country === existingData.country
+        Billnumber === existingData.number &&
+        selectedAgent?.name === existingData?.iataAgent.name &&
+        rate === existingData.rate &&
+        airwayBillWeight === existingData.airwayBillWeight &&
+        fee === existingData.fee
       ) {
         MySwal.fire({
           icon: "error",
@@ -75,15 +77,15 @@ export default function AirwayBill({
     setLoading(true);
     try {
       const payload = {
-        number,
+        number: Billnumber,
         iataAgent: selectedAgent, // Pass the selected agent
-        dateTime: date,
+        dateTime: moment(date).format("YYYY-MM-DDTHH:mm:ss"),
         rate,
         airwayBillWeight,
         fee,
       };
       const url = existingData
-        ? `${apiUrl}/airwaybill/${existingData.id}`
+        ? `${apiUrl}/airwaybill/${existingData?.id}`
         : `${apiUrl}/airwaybill`;
       const method = existingData ? "PUT" : "POST";
 
@@ -95,17 +97,24 @@ export default function AirwayBill({
 
       const { id } = await response.json();
 
-      if (existingData) {
-        await UpdateConsignment(consignmentId, {
-          airwayBill: { id, ...payload },
-        });
-      } else {
+      if (!existingData) {
         await UpdateConsignment(
           consignmentId,
           { airwayBill: { id, ...payload } },
-          "Airway Bill"
+          "Pending"
         );
       }
+      // if (!existingData) {
+      //   await UpdateConsignment(consignmentId, {
+      //     airwayBill: { id, ...payload },
+      //   });
+      // } else {
+      //   await UpdateConsignment(
+      //     consignmentId,
+      //     { airwayBill: { id, ...payload } },
+      //     "Airway Bill"
+      //   );
+      // }
       setFormStatuses((prev) => ({
         ...prev,
         airwayBill: { id, ...payload },
@@ -125,7 +134,7 @@ export default function AirwayBill({
 
       if (!existingData) {
         // Clear form for new data
-        setNumber("");
+        setBillNumber("");
         setRate("");
         setAirwayBillWeight("");
         setFee("");
@@ -161,29 +170,38 @@ export default function AirwayBill({
   }, []);
   useEffect(() => {
     if (existingData) {
-      // Pre-fill the form with existing data
-      setAirwayBillWeight(existingData.airwayBillWeight);
-      const date = new Date(existingData.dateTime); // Convert the string to a Date object
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
-      const day = String(date.getDate()).padStart(2, "0");
-      setFormattedDate(`${year}-${month}-${day}`);
-      setFee(existingData.fee);
-      setNumber(existingData.number);
-      setRate(existingData.rate);
-      setSelectedAgent(existingData.iataAgent);
+      setBillNumber(existingData.number || "");
+      setRate(existingData.rate || "");
+      setAirwayBillWeight(existingData.airwayBillWeight || "");
+      setFee(existingData.fee || "");
+      setSelectedAgent(existingData.iataAgent || null);
+      setFormattedDate(
+        existingData.dateTime
+          ? moment(existingData.dateTime).format("YYYY-MM-DD")
+          : ""
+      );
     }
   }, [existingData]);
   return (
-    <div className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2">
-      <div className=" shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2">
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2"
+    >
+      <motion.div
+        className=" shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2"
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         <h2 className="text-xl font-semibold mb-8">Airway Bill</h2>
         {/* Number */}
         <Input
-          id="number"
-          type="text"
-          value={number}
-          onChange={(e) => setNumber(e.target.value)}
+          id="Billnumber"
+          type="number"
+          value={Billnumber}
+          onChange={(e) => setBillNumber(e.target.value)}
           placeholder="Enter Airway Bill Number"
           label="Airway Bill Number*"
         />
@@ -272,7 +290,7 @@ export default function AirwayBill({
           existingData={existingData}
           classes=""
         />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

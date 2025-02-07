@@ -96,6 +96,14 @@ export default function ItemSelectionPage() {
   const handleSave = async () => {
     setSubmitLoading(true);
     try {
+      // Fetch the current consignment data first
+      const currentConsignmentResponse = await fetch(`${apiUrl}/consignment/${id}`);
+      if (!currentConsignmentResponse.ok) {
+        throw new Error("Failed to fetch current consignment data.");
+      }
+      const currentConsignment = await currentConsignmentResponse.json();
+  
+      // Post each selected item to /consignmentitem and collect their IDs
       const response = await Promise.all(
         selectedItems.map((item) =>
           fetch(`${apiUrl}/consignmentitem`, {
@@ -103,30 +111,34 @@ export default function ItemSelectionPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               item,
-              packaging: null,
-              weightPerUnit: 0,
-              commodityPerUnitCost: 0,
-              packagingPerUnitCost: 0,
-              quantity: 0,
-              damage: 0,
+              
             }),
           }).then((res) => res.json())
         )
       );
-
+  
+      // Extract only IDs from response
       const goods = response.map((item) => ({
         id: item.id,
       }));
-
+  
+      // Merge new goods with existing consignment data
+      const updatedConsignment = {
+        ...currentConsignment, // Keep existing data
+        goods, // Only update goods
+      };
+  
+      // Update consignment with existing data + new goods
       const consignmentResponse = await fetch(`${apiUrl}/consignment/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goods: goods }),
+        body: JSON.stringify(updatedConsignment), // Send the full updated data
       });
-
+  
       if (!consignmentResponse.ok) {
         throw new Error("Failed to update consignment.");
       }
+  
       Swal.fire({
         position: "top-center",
         icon: "success",
@@ -134,7 +146,7 @@ export default function ItemSelectionPage() {
         showConfirmButton: false,
         timer: 1000,
       });
-
+  
       router.push(`/startconsignment/${id}`);
     } catch (error) {
       Swal.fire({
@@ -146,10 +158,11 @@ export default function ItemSelectionPage() {
       setSubmitLoading(false);
     }
   };
+  
 
   return (
     <motion.div
-      className={`${font.poppins.className} min-h-screen py-8 px-4 md:px-8 dark:bg-gray-800 text-LightPText dark:text-DarkPText`}
+      className={`${font.poppins.className} min-h-screen py-8  dark:bg-gray-800 text-LightPText dark:text-DarkPText`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}

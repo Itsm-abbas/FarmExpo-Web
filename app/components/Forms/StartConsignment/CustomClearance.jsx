@@ -77,15 +77,11 @@ export default function CustomClearence({
 
       const { id } = await response.json();
 
-      if (existingData) {
-        await UpdateConsignment(consignmentId, {
-          customClearance: { id, ...payload },
-        });
-      } else {
+      if (!existingData) {
         await UpdateConsignment(
           consignmentId,
           { customClearance: { id, ...payload } },
-          "Custom Clearence"
+          "Custom Cleared"
         );
       }
       setFormStatuses((prev) => ({

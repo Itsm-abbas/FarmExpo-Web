@@ -9,7 +9,7 @@ import { FaArrowRight } from "react-icons/fa";
 import Formatter from "@utils/dateFormat";
 import fonts from "@utils/fonts";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const router = useRouter();
@@ -117,12 +117,12 @@ export default function Home() {
 
   return (
     <motion.div
-      className="py-24 flex items-center justify-center"
+      className="py-24"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-24 md:gap-8">
+      <div className="flex flex-col md:flex-row gap-24 md:gap-8 md:justify-between">
         {/* Left Section */}
         <motion.div
           className="flex flex-col justify-center items-start space-y-10"
@@ -144,7 +144,7 @@ export default function Home() {
           )}
           <motion.button
             onClick={() => startConsignment()}
-            className={`${fonts.poppins.className} flex gap-2 items-center px-4 sm:px-6 py-3 bg-PrimaryButton hover:bg-PrimaryButtonHover text-white rounded-lg transition`}
+            className={`${fonts.poppins.className} text-sm sm:text-base flex gap-2 items-center px-4 sm:px-6 py-3 bg-PrimaryButton hover:bg-PrimaryButtonHover text-white rounded-lg transition`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             disabled={loader}

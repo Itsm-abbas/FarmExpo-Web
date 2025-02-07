@@ -1,68 +1,62 @@
 "use client";
 
-import UpdateConsignment from "../../../utils/updateConsignment";
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import LinkButton from "@components/Button/LinkButton";
+import { FaEye } from "react-icons/fa";
 const MySwal = withReactContent(Swal);
-
-export default function ConsigneeForm({
-  consignmentId,
-  existingData,
-  setFormStatuses,
-  setActiveAccordion,
-}) {
+export default function ConsigneeForm() {
   const router = useRouter();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id"); // Extract the ID from query params
 
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     country: "",
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (existingData) {
-      setFormData(existingData); // Pre-fill the form with existing data
+    if (id) {
+      // Fetch the existing consingee data
+      const fetchConsignee = async () => {
+        try {
+          const response = await fetch(`${apiUrl}/consignee/${id}`);
+          const data = await response.json();
+          setFormData(data);
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Failed to fetch consingee details.",
+          });
+        }
+      };
+      fetchConsignee();
     }
-  }, [existingData]);
+  }, [id]);
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.address || !formData.country) {
-      MySwal.fire({
+      Swal.fire({
         icon: "error",
-        title: "Oops...",
+        title: "Error",
         text: "Please fill in all the fields.",
       });
       return;
     }
-    if (existingData) {
-      if (
-        formData.ntn === existingData.ntn &&
-        formData.name === existingData.name &&
-        formData.address === existingData.address &&
-        formData.country === existingData.country
-      ) {
-        MySwal.fire({
-          icon: "error",
-          title: "Same data",
-          text: "Please make changes to update the data.",
-        });
-        return;
-      } // Check if there are changes in existing data - if not, return
-    }
 
-    setIsLoading(true);
-
+    setLoading(true);
     try {
-      const url = existingData
-        ? `${apiUrl}/consignee/${existingData.id}`
-        : `${apiUrl}/consignee`;
-      const method = existingData ? "PUT" : "POST";
+      const method = id ? "PUT" : "POST";
+      const url = id ? `${apiUrl}/consignee/${id}` : `${apiUrl}/consignee`;
 
       const response = await fetch(url, {
         method,
@@ -71,47 +65,30 @@ export default function ConsigneeForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save data.");
+        throw new Error(`Error: ${response.status} - ${response.statusText}`);
       }
-
-      const { id } = await response.json();
-
-      if (existingData) {
-        await UpdateConsignment(consignmentId, {
-          consignee: { id, ...formData },
-        });
-      } else {
-        await UpdateConsignment(
-          consignmentId,
-          { consignee: { id, ...formData } },
-          "Consignee"
-        );
-      }
-      setFormStatuses((prev) => ({
-        ...prev,
-        consignee: { id, ...formData },
-      }));
-      setActiveAccordion(null);
-      MySwal.fire({
+      const result = await Swal.fire({
         icon: "success",
         title: "Success",
-        text: existingData
-          ? "Consignee updated successfully!"
-          : "Consignee added successfully!",
+        text: id
+          ? "Consignee updated successfully."
+          : "Consignee added successfully.",
       });
-
-      if (!existingData) {
-        setFormData({ name: "", address: "", country: "" }); // Clear form for new data
+      if (response.ok) {
+        setFormData({ name: "", address: "", country: "" }); // Clear form for new entry
+      }
+      if (result.isConfirmed) {
+        router.push("view-consignee");
       }
     } catch (error) {
-      MySwal.fire({
+      console.error(error);
+      Swal.fire({
         icon: "error",
         title: "Error",
         text: "An error occurred while saving data.",
       });
     } finally {
-      setIsLoading(false);
-      router.refresh();
+      setLoading(false);
     }
   };
 
@@ -156,11 +133,16 @@ export default function ConsigneeForm({
         </div>
         <SaveButton
           handleSubmit={handleSubmit}
-          isLoading={isLoading}
-          existingData={existingData}
-          classes={""}
+          isLoading={loading}
+          existingData={id ? true : false}
         />
       </div>
+      <LinkButton
+        href="/consignment/consignee/view-consignee"
+        title="See your consignee"
+        icon={FaEye}
+        desc="Click to view your existing consignee"
+      />
     </div>
   );
 }

@@ -66,7 +66,7 @@ export default function RecoveryDoneForm({
         await UpdateConsignment(
           consignmentId,
           { recoveryDone: { id, ...formData } },
-          "Completed"
+          "Pending"
         );
       }
       setFormStatuses((prev) => ({

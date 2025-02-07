@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 // Import your components
 import CommodityForm from "@forms/Commodity";
@@ -20,14 +21,20 @@ import ViewCustomAgent from "@components/ViewData/CustomAgent";
 import Packaging from "@components/Forms/Packaging";
 import ViewPackaging from "@components/ViewData/Packaging";
 import ConsignmentItemForm from "@components/Forms/Consignmentitem";
+import ConsigneeForm from "@components/Forms/Consignee";
+import ViewConsignee from "@components/ViewData/Consignee";
+import ViewConsignmentItem from "@components/ViewData/ConsignmentItem";
+import { FaArrowLeft } from "react-icons/fa";
 // Add other imports here...
 
 export default function DynamicConsignmentPage() {
   const params = useParams();
   const [FormComponent, setFormComponent] = useState(null);
-
+  const router = useRouter();
   // Component mapping
   const componentMap = {
+    "consignee/add-consignee": ConsigneeForm,
+    "consignee/view-consignee": ViewConsignee,
     "commodity/add-commodity": CommodityForm,
     "commodity/view-commodity": ViewCommodity,
     "packer/add-packer": PackerForm,
@@ -40,7 +47,9 @@ export default function DynamicConsignmentPage() {
     "packaging/view-packaging": ViewPackaging,
     "trader/add-trader": TraderForm,
     "trader/view-trader": ViewTrader,
-    consignmentitem: ConsignmentItemForm,
+    "consignmentitem/add-consignmentitem": ConsignmentItemForm,
+    "consignmentitem/view-consignmentitem": ViewConsignmentItem,
+
     // Add other mappings here...
   };
 
@@ -56,7 +65,15 @@ export default function DynamicConsignmentPage() {
   }, [params]);
 
   return (
-    <div className="w-full h-full flex justify-center items-center py-20">
+    <div className="relative w-full h-full flex flex-col justify-center items-center py-20">
+      <div className="absolute top-5 left-0 sm:left-10 md:left-28 lg:left-40">
+        <button
+          onClick={() => router.back()}
+          className=" flex justify-center items-center gap-2 bg-trasparent  px-4 py-2 rounded-md border border-LightBorder dark:border-DarkBorder hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+        >
+          <FaArrowLeft /> Back
+        </button>
+      </div>
       {FormComponent && <FormComponent />}
     </div>
   );

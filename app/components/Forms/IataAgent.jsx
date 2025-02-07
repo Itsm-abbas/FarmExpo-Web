@@ -53,7 +53,7 @@ export default function IataAgent() {
         router.push("view-iataAgent");
       }
 
-      if (!id) {
+      if (response.ok) {
         setName("");
         setStation("");
       } // Clear form for new entry

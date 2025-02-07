@@ -1,5 +1,17 @@
 const SidebarLinks = [
   {
+    name: "Consignee",
+    links: [
+      {
+        name: "Add Consignee",
+        href: "/consignment/consignee/add-consignee",
+      },
+      {
+        name: "View Consignee",
+        href: "/consignment/consignee/view-consignee",
+      },
+    ],
+  }, {
     name: "Commodity",
     links: [
       {
@@ -69,11 +81,23 @@ const SidebarLinks = [
     links: [
       {
         name: "Add Packaging",
-        href: "/consignment/packaging/add-packaging",
+        href: "/consignment/consignmentitem/add-consignmentitem",
       },
       {
         name: "View Packaging",
-        href: "/consignment/packaging/view-packaging",
+        href: "/consignment/consignmentitem/view-consignmentitem",
+      },
+    ],
+  }, {
+    name: "Consignment Item",
+    links: [
+      {
+        name: "Add Consignment Item",
+        href: "/consignment/consignmentitem/add-consignmentitem",
+      },
+      {
+        name: "View Consignment Item",
+        href: "/consignment/consignmentitem/view-consignmentitem",
       },
     ],
   },

@@ -51,10 +51,13 @@ export default function GoodsDeclarationForm({
     }
     if (existingData) {
       if (
-        formData.ntn === existingData.ntn &&
-        formData.name === existingData.name &&
-        formData.address === existingData.address &&
-        formData.country === existingData.country
+        formData.number === existingData.number &&
+        formData.date === existingData.date &&
+        formData.exchangeRate === existingData.exchangeRate &&
+        formData.commercialInvoiceNumber ===
+          existingData.commercialInvoiceNumber &&
+        formData.fob === existingData.fob &&
+        formData.gdFreight === existingData.gdFreight
       ) {
         MySwal.fire({
           icon: "error",
@@ -80,15 +83,11 @@ export default function GoodsDeclarationForm({
 
       const { id } = await response.json();
 
-      if (existingData) {
-        await UpdateConsignment(consignmentId, {
-          goodsDeclaration: { id, ...formData },
-        });
-      } else {
+      if (!existingData) {
         await UpdateConsignment(
           consignmentId,
           { goodsDeclaration: { id, ...formData } },
-          "Goods Declaration"
+          "Pending"
         );
       }
       setFormStatuses((prev) => ({

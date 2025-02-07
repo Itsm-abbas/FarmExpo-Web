@@ -13,7 +13,7 @@ export default function DamageForm({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({}); // Track loading per item
   const [items, setItems] = useState([]);
   const [formData, setFormData] = useState({});
 
@@ -57,26 +57,17 @@ export default function DamageForm({
       return;
     }
 
-    setIsLoading(true);
+    setLoadingStates((prev) => ({ ...prev, [itemId]: true })); // Set loading for specific item
 
     try {
-      // Find the specific item to update
       const targetItem = items.find((item) => item.id === itemId);
       if (!targetItem) throw new Error("Item not found.");
 
-      // Create the updated item object
       const updatedItem = {
-        id: targetItem.id,
-        item: targetItem.item,
-        packaging: targetItem.packaging,
-        weightPerUnit: targetItem.weightPerUnit,
-        commodityPerUnitCost: targetItem.commodityPerUnitCost,
-        packagingPerUnitCost: targetItem.packagingPerUnitCost,
-        quantity: targetItem.quantity,
-        damage: parseFloat(formData[itemId]), // Add the updated damage
+        ...targetItem,
+        damage: parseFloat(formData[itemId]),
       };
 
-      // Send the updated item to the API
       const response = await fetch(`${apiUrl}/consignmentitem/${itemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +78,6 @@ export default function DamageForm({
         throw new Error("Failed to update consignment item.");
       }
 
-      // Update local state
       const updatedItems = items.map((item) =>
         item.id === itemId ? updatedItem : item
       );
@@ -110,7 +100,7 @@ export default function DamageForm({
         text: error.message || "An error occurred while updating the damage.",
       });
     } finally {
-      setIsLoading(false);
+      setLoadingStates((prev) => ({ ...prev, [itemId]: false })); // Reset loading for specific item
     }
   };
 
@@ -119,7 +109,7 @@ export default function DamageForm({
       {items.map((item) => (
         <div
           key={item.id}
-          className="shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2"
+          className="shadow-md  rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2"
         >
           <div>
             <h2 className="text-xl font-semibold mb-8 capitalize">
@@ -139,14 +129,18 @@ export default function DamageForm({
 
           <button
             onClick={() => handleSubmit(item.id)}
-            className={`uppercase w-full px-4 py-2 rounded-md text-white ${
-              isLoading
+            className={`uppercase w-full px-4 py-2 rounded-md text-white transition-all duration-200 ${
+              loadingStates[item.id]
                 ? "bg-[#A7F3D0] cursor-not-allowed"
                 : "bg-PrimaryButton hover:bg-PrimaryButtonHover"
-            }`}
-            disabled={isLoading}
+            } ${formData[item.id] && "bg-SecondaryButton hover:bg-SecondaryButtonHover"}`}
+            disabled={loadingStates[item.id]}
           >
-            {isLoading ? "Saving..." : "Save"}
+            {loadingStates[item.id]
+              ? "Saving..."
+              : formData[item.id]
+              ? "update"
+              : "Save"}
           </button>
         </div>
       ))}

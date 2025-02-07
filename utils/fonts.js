@@ -6,6 +6,7 @@ import {
   Playfair_Display,
   Raleway,
   Open_Sans,
+  Inter
 } from "next/font/google";
 
 // Declare fonts at the top level
@@ -19,6 +20,7 @@ const playfairDisplay = Playfair_Display({
   weight: ["700"],
 }); // Logo/Branding
 const raleway = Raleway({ subsets: ["latin"], weight: ["400"] }); // Branding
+const inter = Inter({ subsets: ["latin"], weight: ["400"] }); // Branding
 
 // Group fonts into an object after declarations
 let fonts = {
@@ -29,6 +31,7 @@ let fonts = {
   openSans,
   playfairDisplay,
   raleway,
+  inter
 };
 
 export default fonts;

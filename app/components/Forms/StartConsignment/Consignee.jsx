@@ -10,7 +10,7 @@ import UpdateConsignment from "@utils/updateConsignment";
 
 const MySwal = withReactContent(Swal);
 
-export default function TraderForm({
+export default function ConsigneeForm({
   consignmentId,
   existingData,
   setFormStatuses,
@@ -18,59 +18,59 @@ export default function TraderForm({
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [traders, setTraders] = useState([]);
-  const [selectedTrader, setSelectedTrader] = useState(null);
-  const [isLoadingTraders, setIsLoadingTraders] = useState(false);
+  const [consignee, setConsignee] = useState([]);
+  const [selectedConsignee, setSelectedConsginee] = useState(null);
+  const [isLaodingConsignee, setLoadingConsignee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Fetch traders from API
+  // Fetch consignee from API
   useEffect(() => {
-    const fetchTraders = async () => {
-      setIsLoadingTraders(true);
+    const fetchConsignee = async () => {
+      setLoadingConsignee(true);
       try {
-        const response = await fetch(`${apiUrl}/trader`);
+        const response = await fetch(`${apiUrl}/consignee`);
         const result = await response.json();
-        setTraders(result);
+        setConsignee(result);
       } catch (error) {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: "Failed to fetch traders.",
+          text: "Failed to fetch consignee.",
         });
       } finally {
-        setIsLoadingTraders(false);
+        setLoadingConsignee(false);
       }
     };
-    fetchTraders();
+    fetchConsignee();
   }, []);
 
   // Set existing data when editing
   useEffect(() => {
     if (existingData) {
-      setSelectedTrader(existingData);
+      setSelectedConsginee(existingData);
     }
   }, [existingData]);
 
-  // Handle trader selection
-  const handleTraderChange = (e) => {
+  // Handle consignee selection
+  const handleConsigneeChange = (e) => {
     const selectedId = e.target.value;
-    if (selectedId === "add-new-trader") {
-      router.push("/consignment/trader/add-trader");
+    if (selectedId === "add-new-consignee") {
+      router.push("/consignment/consignee/add-consignee");
     } else {
-      const trader = traders.find((t) => t.id === parseInt(selectedId));
-      setSelectedTrader(trader);
+      const c = consignee.find((t) => t.id === parseInt(selectedId));
+      setSelectedConsginee(c);
     }
     setIsDropdownOpen(false);
   };
 
-  // Submit the selected trader
+  // Submit the selected consignee
   const handleSubmit = async () => {
-    if (!selectedTrader) {
+    if (!selectedConsignee) {
       MySwal.fire({
         icon: "error",
         title: "Oops...",
-        text: "Please select a trader.",
+        text: "Please select a consignee.",
       });
       return;
     }
@@ -80,26 +80,26 @@ export default function TraderForm({
     try {
       const updatedConsignment = await UpdateConsignment(
         consignmentId,
-        { trader: selectedTrader },
+        { consignee: selectedConsignee },
         "Pending"
       );
 
       setFormStatuses((prev) => ({
         ...prev,
-        trader: selectedTrader,
+        consignee: selectedConsignee,
       }));
       setActiveAccordion(null);
 
       MySwal.fire({
         icon: "success",
         title: "Success",
-        text: "Trader updated successfully!",
+        text: "Consignee updated successfully!",
       });
     } catch (error) {
       MySwal.fire({
         icon: "error",
         title: "Error",
-        text: "An error occurred while updating the trader.",
+        text: "An error occurred while updating the consignee.",
       });
     } finally {
       setIsSubmitting(false);
@@ -119,31 +119,31 @@ export default function TraderForm({
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <h2 className="text-xl font-semibold mb-8">Select Trader</h2>
+        <h2 className="text-xl font-semibold mb-8">Select Consignee</h2>
 
-        {/* Trader Dropdown */}
+        {/* Consignee Dropdown */}
         <div className="relative">
-          {isLoadingTraders ? (
-            <p className="text-gray-500">Fetching traders...</p>
+          {isLaodingConsignee ? (
+            <p className="text-gray-500">Fetching consignee...</p>
           ) : (
             <div className="relative">
               <motion.select
-                id="trader"
-                value={selectedTrader?.id || ""}
-                onChange={handleTraderChange}
+                id="consignee"
+                value={selectedConsignee?.id || ""}
+                onChange={handleConsigneeChange}
                 className="bg-LightPBg text-black dark:text-white mb-7 mt-1 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-50"
               >
-                <option value="">Select Trader</option>
-                {traders.map((trader) => (
-                  <option key={trader.id} value={trader.id}>
-                    {trader.name}
+                <option value="">Select Consignee</option>
+                {consignee.map((consignee) => (
+                  <option key={consignee.id} value={consignee.id}>
+                    {consignee.name}
                   </option>
                 ))}
                 <option
-                  value="add-new-trader"
+                  value="add-new-consignee"
                   className="text-green-600 font-semibold cursor-pointer"
                 >
-                  + Add New Trader
+                  + Add New Consignee
                 </option>
               </motion.select>
             </div>

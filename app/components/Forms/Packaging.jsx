@@ -96,6 +96,7 @@ export default function Packaging() {
 
         {/* Name Input */}
         <Input
+          id={"name"}
           type="text"
           placeholder="Enter Name"
           value={name}
@@ -104,6 +105,7 @@ export default function Packaging() {
 
         {/* Package Per Unit Weight Input */}
         <Input
+          id={"packagingWeightPerUnit"}
           type="text"
           placeholder="Enter Packaging Weight Per Unit Cost"
           value={packagingWeightPerUnit}
