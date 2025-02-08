@@ -97,12 +97,14 @@ export default function ItemSelectionPage() {
     setSubmitLoading(true);
     try {
       // Fetch the current consignment data first
-      const currentConsignmentResponse = await fetch(`${apiUrl}/consignment/${id}`);
+      const currentConsignmentResponse = await fetch(
+        `${apiUrl}/consignment/${id}`
+      );
       if (!currentConsignmentResponse.ok) {
         throw new Error("Failed to fetch current consignment data.");
       }
       const currentConsignment = await currentConsignmentResponse.json();
-  
+
       // Post each selected item to /consignmentitem and collect their IDs
       const response = await Promise.all(
         selectedItems.map((item) =>
@@ -111,34 +113,33 @@ export default function ItemSelectionPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               item,
-              
             }),
           }).then((res) => res.json())
         )
       );
-  
+
       // Extract only IDs from response
       const goods = response.map((item) => ({
         id: item.id,
       }));
-  
+
       // Merge new goods with existing consignment data
       const updatedConsignment = {
         ...currentConsignment, // Keep existing data
         goods, // Only update goods
       };
-  
+
       // Update consignment with existing data + new goods
       const consignmentResponse = await fetch(`${apiUrl}/consignment/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedConsignment), // Send the full updated data
       });
-  
+
       if (!consignmentResponse.ok) {
         throw new Error("Failed to update consignment.");
       }
-  
+
       Swal.fire({
         position: "top-center",
         icon: "success",
@@ -146,7 +147,7 @@ export default function ItemSelectionPage() {
         showConfirmButton: false,
         timer: 1000,
       });
-  
+
       router.push(`/startconsignment/${id}`);
     } catch (error) {
       Swal.fire({
@@ -158,7 +159,6 @@ export default function ItemSelectionPage() {
       setSubmitLoading(false);
     }
   };
-  
 
   return (
     <motion.div
@@ -202,7 +202,7 @@ export default function ItemSelectionPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <h3 className="text-lg font-semibold">{item.name}</h3>

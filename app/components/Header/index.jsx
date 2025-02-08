@@ -65,8 +65,8 @@ export default function Header() {
           <motion.button
             onClick={toggleSidebar}
             className={`text-white md:text-xl bg-PrimaryButton px-4 py-2 rounded-md block md:ml-6`}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             {isSidebarOpen ? <FaTimes /> : <FaBars />}
           </motion.button>

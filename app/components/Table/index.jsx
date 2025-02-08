@@ -28,7 +28,7 @@ const ReusableTable = ({
         </h2>
 
         <div>
-          <table className="w-full min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize">
+          <table className="w-full min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-lg">
             <thead>
               <tr className="bg-PrimaryButton text-white">
                 {headers.map((header, index) => (
@@ -46,8 +46,8 @@ const ReusableTable = ({
                 Array.from({ length: 5 }).map((_, index) => (
                   <motion.tr
                     key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
                   >
                     {headers.map((_, idx) => (
@@ -64,34 +64,35 @@ const ReusableTable = ({
                 data.map((item, index) => (
                   <motion.tr
                     key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
+                    className="hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                   >
-                    <td className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-2 text-center">
+                    <td className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-1 sm:py-2 text-center">
                       {index + 1}
                     </td>
                     {headers.slice(1, -1).map((field, idx) => (
                       <td
                         key={idx}
-                        className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-2 text-center"
+                        className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-1 sm:py-2 text-center"
                       >
                         {field.accessor
                           ? getNestedValue(item, field.accessor)
                           : item[field]}
                       </td>
                     ))}
-                    <td className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-2 text-center">
-                      <div className="flex justify-center items-center space-x-3">
+                    <td className="border border-LightBorder dark:border-DarkBorder px-3 sm:px-4 py-1 sm:py-2 text-center">
+                      <div className="flex justify-center items-center space-x-2">
                         <button
                           onClick={() => onEdit(item.id)}
-                          className="text-blue-500 hover:text-blue-700 text-lg"
+                          className="p-1 sm:p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-base sm:text-lg"
                         >
                           <MdEdit />
                         </button>
                         <button
                           onClick={() => onDelete(item.id)}
-                          className="text-red-500 hover:text-red-700 text-lg"
+                          className="p-1 sm:p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition text-base sm:text-lg"
                         >
                           <MdDelete />
                         </button>
@@ -100,14 +101,18 @@ const ReusableTable = ({
                   </motion.tr>
                 ))
               ) : (
-                <tr>
+                <motion.tr
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   <td
                     colSpan={headers.length}
                     className="text-center text-sm md:text-lg font-semibold px-3 sm:px-4 py-2"
                   >
                     {noDataMessage}
                   </td>
-                </tr>
+                </motion.tr>
               )}
             </tbody>
           </table>

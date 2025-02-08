@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 import { FaArrowRight } from "react-icons/fa";
 import Formatter from "@utils/dateFormat";
 import fonts from "@utils/fonts";
-import { MdDelete, MdEdit } from "react-icons/md";
+import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 import { motion } from "framer-motion";
+import Loading from "./loading";
+import LinkButton from "@components/Button/LinkButton";
 
 export default function Home() {
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function Home() {
   const [loader, setLoader] = useState(false);
   const [editLoader, setEditLoader] = useState(false);
   const { isLoading, error, data, refetch } = useQuery({
-    queryKey: ["repoData"],
+    queryKey: ["consignments"],
     queryFn: async () =>
       fetch(`${apiUrl}/consignment`).then((res) => res.json()),
   });
@@ -114,7 +116,11 @@ export default function Home() {
 
     setGreeting(getGreeting());
   }, []);
-
+  useEffect(() => {
+    if (editLoader) {
+      <Loading />;
+    }
+  }, [editLoader]);
   return (
     <motion.div
       className="py-24"
@@ -162,86 +168,102 @@ export default function Home() {
 
         {/* Right Section */}
         <motion.div
-          className={`${fonts.poppins.className} border-2 border-LightBorder dark:border-DarkBorder shadow-md rounded-md p-3 md:p-6 text-LightPText dark:text-DarkPText`}
+          className={`${fonts.poppins.className}  border-2 border-LightBorder dark:border-DarkBorder shadow-md rounded-md p-3 md:p-6 text-LightPText dark:text-DarkPText`}
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <h2 className="text-xl font-semibold mb-4  ">Your Consignments</h2>
+          <h2 className="text-xl font-semibold mb-4">Your Consignments</h2>
           {isLoading && <DataLoader />}
 
           {!isLoading && (
             <motion.table
-              className="capitalize table-auto text-sm md:text-base w-full border-collapse border border-LightBorder dark:border-DarkBorder"
+              className="w-full mb-4 min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-md dark:shadow-xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             >
               <thead>
-                <tr className="bg-PrimaryButton text-white ">
-                  <th className="border border-LightBorder dark:border-DarkBorder px-4 py-2">
-                    No
-                  </th>
-                  <th className="border border-LightBorder dark:border-DarkBorder px-4 py-2">
-                    Consignee
-                  </th>
-                  <th className="border border-LightBorder dark:border-DarkBorder px-4 py-2">
-                    Status
-                  </th>
-                  <th className="border border-LightBorder dark:border-DarkBorder px-4 py-2">
-                    Edit/Delete
-                  </th>
+                <tr className="bg-PrimaryButton text-white">
+                  {["No", "Consignee", "Status", "Actions"].map(
+                    (item, index) => (
+                      <th
+                        key={index}
+                        className="px-3 sm:px-6 md:px-8 py-2 border border-LightBorder dark:border-DarkBorder text-center"
+                      >
+                        {item}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {/* Dynamically map data */}
                 {data?.length > 0 ? (
-                  [...data]?.reverse().map((item, index) => (
-                    <motion.tr
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: index * 0.1 }}
-                    >
-                      <td className="border border-LightBorder dark:border-DarkBorder px-4 py-2 text-center">
-                        {index + 1}
-                      </td>
-                      <td className="border border-LightBorder dark:border-DarkBorder px-4 py-2 text-center">
-                        {item?.consignee?.name}
-                      </td>
-                      <td className="border border-LightBorder dark:border-DarkBorder px-4 py-2 text-center">
-                        {item?.status || "N/A"}
-                      </td>
-                      <td className="border border-LightBorder dark:border-DarkBorder px-4 py-2 text-center flex justify-center items-center">
-                        <button
-                          onClick={() => handleEdit(item?.id)}
-                          className="text-xl text-SecondaryButton"
-                          disabled={editLoader}
-                        >
-                          {editLoader ? (
-                            <span className="text-xs">Loading...</span>
-                          ) : (
-                            <MdEdit />
-                          )}
-                        </button>
-                        <span className="mx-2 font-bold">|</span>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="text-red-500 hover:underline text-xl"
-                        >
-                          <MdDelete />
-                        </button>
-                      </td>
-                    </motion.tr>
-                  ))
+                  [...data]
+                    .reverse()
+                    .filter((item) => item.status !== "Fulfilled") // Filter out "Fullfilled" consignments
+                    .map((item, index) => (
+                      <motion.tr
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: index * 0.3 }}
+                        className="hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      >
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
+                          {index + 1}
+                        </td>
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
+                          {item?.consignee?.name}
+                        </td>
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              item?.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : item?.status === "Fulfilled"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {item?.status || "N/A"}
+                          </span>
+                        </td>
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-cente">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleEdit(item?.id)}
+                              className="p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-lg"
+                              disabled={editLoader}
+                            >
+                              <MdEdit />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition text-lg"
+                            >
+                              <MdDelete />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
                 ) : (
                   <tr className="text-center">
-                    <td colSpan="3">No consignments found</td>
+                    <td colSpan="4" className="py-4 text-gray-500">
+                      No consignments found
+                    </td>
                   </tr>
                 )}
               </tbody>
             </motion.table>
           )}
+          <LinkButton
+            title={"Show All"}
+            desc="Click to show all consignments"
+            href={"consignment/all-consignments"}
+            icon={MdVisibility}
+          />
         </motion.div>
       </div>
     </motion.div>

@@ -81,11 +81,11 @@ const SidebarLinks = [
     links: [
       {
         name: "Add Packaging",
-        href: "/consignment/consignmentitem/add-consignmentitem",
+        href: "/consignment/packaging/add-packaging",
       },
       {
         name: "View Packaging",
-        href: "/consignment/consignmentitem/view-consignmentitem",
+        href: "/consignment/packaging/view-packaging",
       },
     ],
   }, {

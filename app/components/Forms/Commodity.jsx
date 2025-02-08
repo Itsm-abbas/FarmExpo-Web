@@ -8,8 +8,10 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
 export default function CommodityForm() {
+  const router = useRouter();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Extract the ID from query params
@@ -69,11 +71,11 @@ export default function CommodityForm() {
           : "Commodity added successfully.",
       });
 
-      if (response.ok) {
-        setFormData({ number: "", name: "" });
-      }
       if (result.isConfirmed) {
         router.push("view-commodity");
+      }
+      if (response.ok) {
+        setFormData({ number: "", name: "" });
       }
     } catch (error) {
       Swal.fire({
