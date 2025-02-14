@@ -6,14 +6,16 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
-import { motion } from "framer-motion"; // Import Framer Motion
+import { motion } from "framer-motion";
+import FIU from "./Fiu";
+
 const MySwal = withReactContent(Swal);
 
 export default function GoodsDeclarationForm({
   consignmentId,
   existingData,
   setFormStatuses,
-  setActiveAccordion,
+  formStatus,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -25,7 +27,10 @@ export default function GoodsDeclarationForm({
     fob: "",
     gdFreight: "",
   });
-  const [isLoading, setIsLoading] = useState(false); // Loader state
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showFinancialUtilization, setShowFinancialUtilization] =
+    useState(false);
 
   useEffect(() => {
     if (existingData) {
@@ -33,6 +38,7 @@ export default function GoodsDeclarationForm({
     }
   }, [existingData]);
 
+  // Handle goods declaration submission
   const handleSubmit = async () => {
     if (
       !formData.number ||
@@ -49,6 +55,7 @@ export default function GoodsDeclarationForm({
       });
       return;
     }
+
     if (existingData) {
       if (
         formData.number === existingData.number &&
@@ -65,9 +72,10 @@ export default function GoodsDeclarationForm({
           text: "Please make changes to update the data.",
         });
         return;
-      } // Check if there are changes in existing data - if not, return
+      }
     }
-    setIsLoading(true); // Start loading
+
+    setIsLoading(true);
 
     try {
       const url = existingData
@@ -82,7 +90,6 @@ export default function GoodsDeclarationForm({
       });
 
       const { id } = await response.json();
-
       if (!existingData) {
         await UpdateConsignment(
           consignmentId,
@@ -90,14 +97,13 @@ export default function GoodsDeclarationForm({
           "Pending"
         );
       }
+
       setFormStatuses((prev) => ({
         ...prev,
         goodsDeclaration: { id, ...formData },
       }));
-      setActiveAccordion(null);
-      if (!response.ok) {
-        throw new Error("Failed to save data: Check your internet");
-      }
+      setShowFinancialUtilization(true); // Show the financial utilization form
+
       MySwal.fire({
         icon: "success",
         title: "Success",
@@ -105,6 +111,7 @@ export default function GoodsDeclarationForm({
           ? "Goods Declaration updated successfully!"
           : "Goods Declaration added successfully!",
       });
+
       if (!existingData) {
         setFormData({
           number: "",
@@ -122,10 +129,15 @@ export default function GoodsDeclarationForm({
         text: "An error occurred while saving data.",
       });
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
+  // Handle financial utilization submission
+
+  const handleFiForm = () => {
+    setShowFinancialUtilization(!showFinancialUtilization);
+  };
   return (
     <motion.div
       className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2"
@@ -133,90 +145,107 @@ export default function GoodsDeclarationForm({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.4 }}
     >
-      <motion.div
-        className="shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      >
-        <h2 className="text-xl font-semibold mb-8">Goods Declaration</h2>
-
-        {/* Animated Input Fields */}
+      {!showFinancialUtilization ? (
+        // Goods Declaration Form
         <motion.div
-          className="space-y-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.6 }}
+          className="shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2"
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <Input
-            id={"number"}
-            type="number"
-            label="Number"
-            value={formData.number}
-            onChange={(e) =>
-              setFormData({ ...formData, number: e.target.value })
-            }
-            placeholder="Enter number*"
-          />
-          <Input
-            id={"date"}
-            type="date"
-            label="Date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          />
-          <Input
-            type="number"
-            step="0.01"
-            label="Exchange Rate"
-            value={formData.exchangeRate}
-            onChange={(e) =>
-              setFormData({ ...formData, exchangeRate: e.target.value })
-            }
-            placeholder="Enter exchange rate"
-          />
-          <Input
-            id={"cin"}
-            type="number"
-            label="Commercial Invoice Number"
-            value={formData.commercialInvoiceNumber}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                commercialInvoiceNumber: e.target.value,
-              })
-            }
-            placeholder="Enter Commercial Invoice Number"
-          />
-          <Input
-            id={"fob"}
-            type="number"
-            step="0.01"
-            label="FOB"
-            value={formData.fob}
-            onChange={(e) => setFormData({ ...formData, fob: e.target.value })}
-            placeholder="Enter FOB"
-          />
-          <Input
-            id={"GD-Freight"}
-            type="number"
-            step="0.01"
-            label="GD Freight"
-            value={formData.gdFreight}
-            onChange={(e) =>
-              setFormData({ ...formData, gdFreight: e.target.value })
-            }
-            placeholder="Enter GD Freight"
-          />
-        </motion.div>
+          <h2 className="text-xl font-semibold mb-8">Goods Declaration</h2>
 
-        <SaveButton
-          handleSubmit={handleSubmit}
-          isLoading={isLoading}
-          existingData={existingData}
-          classes=""
+          <motion.div
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.6 }}
+          >
+            <Input
+              id={"number"}
+              type="number"
+              label="Number"
+              value={formData.number}
+              onChange={(e) =>
+                setFormData({ ...formData, number: e.target.value })
+              }
+              placeholder="Enter number*"
+            />
+            <Input
+              id={"date"}
+              type="date"
+              label="Date"
+              value={formData.date}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
+            />
+            <Input
+              type="number"
+              step="0.01"
+              label="Exchange Rate"
+              value={formData.exchangeRate}
+              onChange={(e) =>
+                setFormData({ ...formData, exchangeRate: e.target.value })
+              }
+              placeholder="Enter exchange rate"
+            />
+            <Input
+              id={"cin"}
+              type="number"
+              label="Commercial Invoice Number"
+              value={formData.commercialInvoiceNumber}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  commercialInvoiceNumber: e.target.value,
+                })
+              }
+              placeholder="Enter Commercial Invoice Number"
+            />
+            <Input
+              id={"fob"}
+              type="number"
+              step="0.01"
+              label="FOB"
+              value={formData.fob}
+              onChange={(e) =>
+                setFormData({ ...formData, fob: e.target.value })
+              }
+              placeholder="Enter FOB"
+            />
+            <Input
+              id={"GD-Freight"}
+              type="number"
+              step="0.01"
+              label="GD Freight"
+              value={formData.gdFreight}
+              onChange={(e) =>
+                setFormData({ ...formData, gdFreight: e.target.value })
+              }
+              placeholder="Enter GD Freight"
+            />
+          </motion.div>
+
+          <SaveButton
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
+            existingData={existingData}
+          />
+          <button
+            onClick={handleFiForm}
+            className="flex item-center capitalize justify-center w-full bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 transition-all py-2 rounded-sm"
+          >
+            Add Financial instrument utilization
+          </button>
+        </motion.div>
+      ) : (
+        // Financial Utilization Form
+        <FIU
+          setShowFinancialUtilization={setShowFinancialUtilization}
+          formStatus={formStatus}
         />
-      </motion.div>
+      )}
     </motion.div>
   );
 }

@@ -5,6 +5,9 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCustomAgents } from "@constants/consignmentAPI";
+import { motion } from "framer-motion";
 const MySwal = withReactContent(Swal);
 
 export default function CustomClearence({
@@ -17,21 +20,16 @@ export default function CustomClearence({
   const [fee, setFee] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCustomAgent, setSelectedCustomAgent] = useState(null); // Selected custom agent
-  const [showDropdown, setShowDropdown] = useState(false); // Toggle dropdown visibility
-  const [customAgents, setCustomAgents] = useState([]); // Custom agents fetched from API
-  const [error, setError] = useState(null); // Error state for API call
-
+  const { data: customAgentsData, isLoading: LoadingCustomAgents } = useQuery({
+    queryKey: ["customAgents"],
+    queryFn: fetchCustomAgents,
+  });
   useEffect(() => {
     if (existingData) {
       setSelectedCustomAgent(existingData.ca); // Pre-select the existing agent
       setFee(existingData.fee); // Pre-fill the fee
     }
   }, [existingData]);
-  // Handle selecting a custom agent
-  const handleSelectCustomAgent = (agent) => {
-    setSelectedCustomAgent(agent);
-    setShowDropdown(false); // Close dropdown
-  };
 
   // Save Data
   const handleSubmit = async () => {
@@ -114,63 +112,53 @@ export default function CustomClearence({
       setLoading(false);
     }
   };
-
-  // Fetch custom agents
-  useEffect(() => {
-    const fetchCustomAgents = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/customagent`);
-        const data = await response.json();
-        setCustomAgents(data);
-      } catch (error) {
-        console.error("Error fetching custom agents:", error);
-        setError("Failed to load custom agents.");
-      }
-    };
-
-    fetchCustomAgents();
-  }, []);
-
+  const handleCustomAgentsChange = (e) => {
+    const selectedId = e.target.value;
+    if (selectedId === "add-new-customagent") {
+      router.push("/consignment/customagent/add-customagent");
+    } else {
+      const ca = customAgentsData.find((c) => c.id === parseInt(selectedId));
+      setSelectedCustomAgent(ca);
+    }
+  };
   return (
     <div className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2">
       <div className=" shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2">
         <h2 className="text-xl font-semibold mb-8">Custom Clearance</h2>
 
         {/* Custom Agent Dropdown */}
-        <div className="relative mb-8">
-          <button
-            className={`${
-              showDropdown
-                ? "border border-PrimaryButton"
-                : "border border-LightBorder dark:border-DarkBorder"
-            } w-full  p-2 rounded-md text-left`}
-            onClick={() => setShowDropdown((prev) => !prev)}
+        <div className="relative">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            {selectedCustomAgent
-              ? selectedCustomAgent.name
-              : "Select Custom Agent"}
-          </button>
-          {showDropdown && (
-            <div className="absolute bg-LightSBg dark:bg-DarkSBg shadow-md border border-PrimaryButton mt-2 rounded-md z-10 max-h-60 overflow-y-auto w-full">
-              {loading ? (
-                <p className="p-4 text-LightPText dark:text-DarkPText">
-                  Loading...
-                </p>
-              ) : error ? (
-                <p className="p-4 text-red-500">{error}</p>
+            <motion.select
+              id="customagents"
+              value={selectedCustomAgent?.id || ""}
+              onChange={handleCustomAgentsChange}
+              className="bg-LightPBg text-black dark:text-white mb-7  block w-full border border-LightBorder dark:border-DarkBorder dark:bg-DarkInput rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-30 mt-7"
+              whileFocus={{ scale: 1.02 }}
+            >
+              {LoadingCustomAgents ? (
+                <option value="">Loading...</option>
               ) : (
-                customAgents.map((agent, index) => (
-                  <div
-                    key={index}
-                    className="p-2 hover:bg-LightPBg dark:hover:bg-DarkPBg cursor-pointer"
-                    onClick={() => handleSelectCustomAgent(agent)}
-                  >
-                    {agent.name}
-                  </div>
-                ))
+                <option value="">Select Custom Agent</option>
               )}
-            </div>
-          )}
+              {customAgentsData?.map((ca) => (
+                <option key={ca.id} value={ca.id}>
+                  {ca.name}
+                </option>
+              ))}
+              <option
+                value="add-new-customagent"
+                className="text-green-600 capitalize font-semibold cursor-pointer"
+              >
+                + Add New Custom Agent
+              </option>
+            </motion.select>
+          </motion.div>
         </div>
 
         {/* Fee Input */}

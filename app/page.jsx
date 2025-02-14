@@ -1,105 +1,113 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import DataLoader from "@components/Loader/dataLoader";
 import Swal from "sweetalert2";
 import { useEffect, useState } from "react";
-import { FaArrowRight } from "react-icons/fa";
-import Formatter from "@utils/dateFormat";
+import { FaArrowRight, FaWindowClose } from "react-icons/fa";
 import fonts from "@utils/fonts";
 import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
-import { motion } from "framer-motion";
-import Loading from "./loading";
+import { AnimatePresence, motion } from "framer-motion";
 import LinkButton from "@components/Button/LinkButton";
+import { fetchConsignments } from "@constants/consignmentAPI";
 
 export default function Home() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [greeting, setGreeting] = useState("");
-  const [loader, setLoader] = useState(false);
-  const [editLoader, setEditLoader] = useState(false);
-  const { isLoading, error, data, refetch } = useQuery({
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
+  const [selectedDate, setSelectedDate] = useState(""); // State to store the selected date
+
+  // Fetch consignments
+  const { isLoading, data } = useQuery({
     queryKey: ["consignments"],
-    queryFn: async () =>
-      fetch(`${apiUrl}/consignment`).then((res) => res.json()),
+    queryFn: fetchConsignments,
   });
 
-  if (error) return "An error has occurred: " + error.message;
-
-  const startConsignment = async () => {
-    const date = Formatter.format(new Date());
-    setLoader(true);
-    try {
-      const response = await fetch(`${apiUrl}/consignment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: date,
-          status: "Not started",
-        }),
+  // Mutation for starting a new consignment
+  const startConsignmentMutation = useMutation({
+    mutationFn: async (date) => {
+      const response = await axios.post(`${apiUrl}/consignment`, {
+        date: date,
+        status: "Not started",
       });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      router.push(`/items-selection/${data.id}`);
+    },
+    onError: (error) => {
+      Swal.fire("Error!", error.message, "error");
+    },
+  });
 
-      if (!response.ok) {
-        setLoader(false);
-        throw new Error("Failed to create consignment.");
-      }
-
-      const consignment = await response.json();
-      router.push(`/items-selection/${consignment.id}`);
-      setLoader(false);
-      return consignment.id;
-    } catch (error) {
-      setLoader(false);
-      throw error;
-    }
-  };
+  // Mutation for deleting a consignment
+  const deleteConsignmentMutation = useMutation({
+    mutationFn: async (id) => {
+      await axios.delete(`${apiUrl}/consignment/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["consignments"]);
+      Swal.fire({
+        position: "top-center",
+        icon: "success",
+        title: "Deleted!",
+        showConfirmButton: false,
+        timer: 1000,
+      });
+    },
+    onError: (error) => {
+      Swal.fire("Error!", error.message, "error");
+    },
+  });
 
   const handleDelete = async (id) => {
-    try {
-      const result = await Swal.fire({
-        title: "Are you sure?",
-        text: "Do you really want to delete this consignment? This action cannot be undone.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Yes, delete it!",
-      });
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you really want to delete this consignment? This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-      if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/consignment/${id}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          throw new Error("Failed to delete consignment.");
-        }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted!",
-          showConfirmButton: false,
-          timer: 1000,
-        });
-        refetch(); // Refresh the data after deletion
-      }
-    } catch (error) {
-      console.error("Error deleting consignment:", error);
-      Swal.fire("Error!", "Failed to delete the consignment.", "error");
+    if (result.isConfirmed) {
+      deleteConsignmentMutation.mutate(id);
     }
   };
 
-  const handleEdit = async (id) => {
-    setEditLoader(true);
+  const handleEdit = (id) => {
     try {
-      await router.push(`/startconsignment/${id}`); // Navigate
+      router.push(`/startconsignment/${id}`);
     } catch (error) {
       console.error("Navigation error:", error);
-    } finally {
-      setEditLoader(false); // Hide loader
     }
+  };
+
+  // Open the modal
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  // Close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Handle date selection and start consignment
+  const handleSave = () => {
+    if (!selectedDate) {
+      Swal.fire("Error!", "Please select a date.", "error");
+      return;
+    }
+
+    // Start the consignment with the selected date
+    startConsignmentMutation.mutate(selectedDate);
+    closeModal();
   };
 
   useEffect(() => {
@@ -116,11 +124,7 @@ export default function Home() {
 
     setGreeting(getGreeting());
   }, []);
-  useEffect(() => {
-    if (editLoader) {
-      <Loading />;
-    }
-  }, [editLoader]);
+
   return (
     <motion.div
       className="py-24"
@@ -128,6 +132,56 @@ export default function Home() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Modal */}
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50"
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 50, opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="bg-LightSBg w-80 text-LightPText dark:text-DarkPText dark:bg-DarkPBg p-6 rounded-lg shadow-2xl"
+            >
+              <h2 className="text-xl font-semibold mb-4">
+                Select Consignment Date
+              </h2>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full bg-DarkPBg text-LightPText dark:text-DarkPText p-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-PrimaryButton focus:outline-none"
+              />
+              <div className="flex justify-end gap-2">
+                <motion.button
+                  onClick={closeModal}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleSave}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 bg-PrimaryButton text-white rounded-lg hover:bg-PrimaryButtonHover transition-all duration-200"
+                >
+                  Save
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row gap-24 md:gap-8 md:justify-between">
         {/* Left Section */}
         <motion.div
@@ -149,20 +203,20 @@ export default function Home() {
             </h1>
           )}
           <motion.button
-            onClick={() => startConsignment()}
-            className={`${fonts.poppins.className} text-sm sm:text-base flex gap-2 items-center px-4 sm:px-6 py-3 bg-PrimaryButton hover:bg-PrimaryButtonHover text-white rounded-lg transition`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            disabled={loader}
+            onClick={openModal} // Open the modal on button click
+            className={`${fonts.poppins.className} cursor-pointer text-sm sm:text-base flex gap-2 items-center px-4 sm:px-6 py-3 bg-PrimaryButton hover:bg-PrimaryButtonHover text-white rounded-lg transition`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={startConsignmentMutation.isPending}
           >
-            {loader ? (
+            {startConsignmentMutation.isPending ? (
               <>
-                <span>Creating Consignment...</span>
+                <span className="animate-pulse">Creating Consignment...</span>
               </>
             ) : (
               "Start New Consignment"
             )}{" "}
-            {!loader && <FaArrowRight />}
+            {!startConsignmentMutation.isPending && <FaArrowRight />}
           </motion.button>
         </motion.div>
 
@@ -234,7 +288,6 @@ export default function Home() {
                             <button
                               onClick={() => handleEdit(item?.id)}
                               className="p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-lg"
-                              disabled={editLoader}
                             >
                               <MdEdit />
                             </button>

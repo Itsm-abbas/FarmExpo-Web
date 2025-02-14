@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import UpdateConsignment from "@utils/updateConsignment";
+import { useQuery } from "@tanstack/react-query";
+import { fetchConsignees } from "@constants/consignmentAPI";
 
 const MySwal = withReactContent(Swal);
 
@@ -16,34 +18,14 @@ export default function ConsigneeForm({
   setFormStatuses,
   setActiveAccordion,
 }) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [consignee, setConsignee] = useState([]);
   const [selectedConsignee, setSelectedConsginee] = useState(null);
-  const [isLaodingConsignee, setLoadingConsignee] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Fetch consignee from API
-  useEffect(() => {
-    const fetchConsignee = async () => {
-      setLoadingConsignee(true);
-      try {
-        const response = await fetch(`${apiUrl}/consignee`);
-        const result = await response.json();
-        setConsignee(result);
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Failed to fetch consignee.",
-        });
-      } finally {
-        setLoadingConsignee(false);
-      }
-    };
-    fetchConsignee();
-  }, []);
+  const { data: consignees, isLoading: LoadingConsignees } = useQuery({
+    queryKey: ["consignees"],
+    queryFn: fetchConsignees,
+  });
 
   // Set existing data when editing
   useEffect(() => {
@@ -52,19 +34,18 @@ export default function ConsigneeForm({
     }
   }, [existingData]);
 
-  // Handle consignee selection
+  // Handle consignees selection
   const handleConsigneeChange = (e) => {
     const selectedId = e.target.value;
-    if (selectedId === "add-new-consignee") {
+    if (selectedId === "add-new-consignees") {
       router.push("/consignment/consignee/add-consignee");
     } else {
-      const c = consignee.find((t) => t.id === parseInt(selectedId));
+      const c = consignees.find((t) => t.id === parseInt(selectedId));
       setSelectedConsginee(c);
     }
-    setIsDropdownOpen(false);
   };
 
-  // Submit the selected consignee
+  // Submit the selected consignees
   const handleSubmit = async () => {
     if (!selectedConsignee) {
       MySwal.fire({
@@ -78,15 +59,15 @@ export default function ConsigneeForm({
     setIsSubmitting(true);
 
     try {
-      const updatedConsignment = await UpdateConsignment(
+      await UpdateConsignment(
         consignmentId,
-        { consignee: selectedConsignee },
+        { consignees: selectedConsignee },
         "Pending"
       );
 
       setFormStatuses((prev) => ({
         ...prev,
-        consignee: selectedConsignee,
+        consignees: selectedConsignee,
       }));
       setActiveAccordion(null);
 
@@ -99,7 +80,7 @@ export default function ConsigneeForm({
       MySwal.fire({
         icon: "error",
         title: "Error",
-        text: "An error occurred while updating the consignee.",
+        text: "An error occurred while updating the consignees.",
       });
     } finally {
       setIsSubmitting(false);
@@ -123,24 +104,24 @@ export default function ConsigneeForm({
 
         {/* Consignee Dropdown */}
         <div className="relative">
-          {isLaodingConsignee ? (
-            <p className="text-gray-500">Fetching consignee...</p>
+          {LoadingConsignees ? (
+            <p className="text-gray-500">Fetching consignees...</p>
           ) : (
             <div className="relative">
               <motion.select
-                id="consignee"
+                id="consignees"
                 value={selectedConsignee?.id || ""}
                 onChange={handleConsigneeChange}
                 className="bg-LightPBg text-black dark:text-white mb-7 mt-1 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-50"
               >
                 <option value="">Select Consignee</option>
-                {consignee.map((consignee) => (
+                {consignees?.map((consignee) => (
                   <option key={consignee.id} value={consignee.id}>
                     {consignee.name}
                   </option>
                 ))}
                 <option
-                  value="add-new-consignee"
+                  value="add-new-consignees"
                   className="text-green-600 font-semibold cursor-pointer"
                 >
                   + Add New Consignee

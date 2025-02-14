@@ -5,16 +5,15 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
 const MySwal = withReactContent(Swal);
 export default function ConsigneeForm() {
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Extract the ID from query params
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -95,9 +94,8 @@ export default function ConsigneeForm() {
   return (
     <div className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2">
       <div className=" shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2">
+        <h2 className="text-xl font-semibold mb-8">Consignee</h2>
         <div>
-          <h2 className="text-xl font-semibold mb-8">Consignee</h2>
-
           <Input
             id="name"
             type="text"

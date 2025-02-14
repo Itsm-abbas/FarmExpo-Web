@@ -7,6 +7,8 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import UpdateConsignment from "@utils/updateConsignment";
 import Link from "next/link";
+import { fetchPackers } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
 
 const MySwal = withReactContent(Swal);
 const Packing = ({
@@ -17,38 +19,18 @@ const Packing = ({
 }) => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [ratePerKg, setRatePerKg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedPacker, setSelectedPacker] = useState(null);
-  const [packers, setPackers] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [error, setError] = useState(null);
-
+  const { data: packersData, isLoading: LoadingPackers } = useQuery({
+    queryKey: ["packers"],
+    queryFn: fetchPackers,
+  });
   useEffect(() => {
     if (existingData) {
       setSelectedPacker(existingData.packer);
       setRatePerKg(existingData.ratePerKg);
     }
   }, [existingData]);
-
-  const fetchPackers = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/packer`);
-      const data = await response.json();
-      setPackers(data);
-    } catch (error) {
-      console.error("Error fetching packers:", error);
-      setError("Failed to load packers.");
-    }
-  };
-
-  useEffect(() => {
-    fetchPackers();
-  }, []);
-
-  const handleSelectPacker = (packer) => {
-    setSelectedPacker(packer);
-    setShowDropdown(false);
-  };
 
   const handleSubmit = async () => {
     if (!ratePerKg || selectedPacker === null) {
@@ -60,7 +42,7 @@ const Packing = ({
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const payload = { packer: selectedPacker, ratePerKg };
       const url = existingData
@@ -107,70 +89,65 @@ const Packing = ({
         text: "An error occurred while saving data.",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
+  const handlePacker = (e) => {
+    const selectedId = e.target.value;
+    if (selectedId === "add-new-packer") {
+      router.push("/consignment/packer/add-packer");
+    } else {
+      const packer = packersData.find((p) => p.id === parseInt(selectedId));
+      setSelectedPacker(packer);
+    }
+  };
   return (
     <div className="space-y-4 text-LightPText dark:text-DarkPText w-full md:w-4/5 lg:w-1/2">
       <div className="shadow-md rounded-md p-6 space-y-4 border-LightBorder dark:border-DarkBorder border-2">
         <h2 className="text-xl font-semibold mb-4">Packing</h2>
-        <div className="relative mb-4">
-          <button
-            className={`w-full p-2 rounded-md text-left border ${
-              showDropdown
-                ? "border-PrimaryButton"
-                : "border-LightBorder dark:border-DarkBorder"
-            }`}
-            onClick={() => setShowDropdown((prev) => !prev)}
+        <div className="relative">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            {selectedPacker ? selectedPacker.name : "Select Packer"}
-          </button>
-          <AnimatePresence>
-            {showDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="absolute bg-LightSBg dark:bg-DarkSBg shadow-md border mt-2 rounded-md z-10 max-h-60 overflow-y-auto w-full"
+            <motion.select
+              id="packers"
+              value={selectedPacker?.id || ""}
+              onChange={handlePacker}
+              className="bg-LightPBg text-black dark:text-white mb-7  block w-full border border-LightBorder dark:border-DarkBorder dark:bg-DarkInput rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-30 mt-7"
+              whileFocus={{ scale: 1.02 }}
+            >
+              {LoadingPackers ? (
+                <option value="">Loading...</option>
+              ) : (
+                <option value="">Select Packer</option>
+              )}
+              {packersData?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+              <option
+                value="add-new-customagent"
+                className="text-green-600 capitalize font-semibold cursor-pointer"
               >
-                {loading ? (
-                  <p className="p-4 text-gray-500">Loading...</p>
-                ) : error ? (
-                  <p className="p-4 text-red-500">{error}</p>
-                ) : (
-                  <>
-                    {packers.map((packer, index) => (
-                      <div
-                        key={index}
-                        className="p-2 hover:bg-LightPBg dark:hover:bg-DarkPBg cursor-pointer"
-                        onClick={() => handleSelectPacker(packer)}
-                      >
-                        {packer.name}
-                      </div>
-                    ))}
-                    <div className="p-2 text-PrimaryButton cursor-pointer hover:underline">
-                      <Link href={"/consignment/packer/add-packer"}>
-                        + Add New Packer
-                      </Link>
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                + Add New Packer
+              </option>
+            </motion.select>
+          </motion.div>
         </div>
         <Input
           id="ratePerKg"
-          label="Rate Per Kg"
+          type="number"
           placeholder="Enter rate per kg"
           value={ratePerKg}
           onChange={(e) => setRatePerKg(e.target.value)}
         />
         <SaveButton
           handleSubmit={handleSubmit}
-          isLoading={loading}
+          isLoading={isLoading}
           existingData={existingData}
         />
       </div>

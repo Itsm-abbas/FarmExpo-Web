@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import UpdateConsignment from "@utils/updateConsignment";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTraders } from "@constants/consignmentAPI";
 
 const MySwal = withReactContent(Swal);
 
@@ -18,32 +20,14 @@ export default function TraderForm({
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [traders, setTraders] = useState([]);
   const [selectedTrader, setSelectedTrader] = useState(null);
   const [isLoadingTraders, setIsLoadingTraders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
   // Fetch traders from API
-  useEffect(() => {
-    const fetchTraders = async () => {
-      setIsLoadingTraders(true);
-      try {
-        const response = await fetch(`${apiUrl}/trader`);
-        const result = await response.json();
-        setTraders(result);
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "Failed to fetch traders.",
-        });
-      } finally {
-        setIsLoadingTraders(false);
-      }
-    };
-    fetchTraders();
-  }, []);
+  const { data: tradersData, isLoading: LoadingTraders } = useQuery({
+    queryKey: ["Trader"],
+    queryFn: fetchTraders,
+  });
 
   // Set existing data when editing
   useEffect(() => {
@@ -58,10 +42,9 @@ export default function TraderForm({
     if (selectedId === "add-new-trader") {
       router.push("/consignment/trader/add-trader");
     } else {
-      const trader = traders.find((t) => t.id === parseInt(selectedId));
+      const trader = tradersData.find((t) => t.id === parseInt(selectedId));
       setSelectedTrader(trader);
     }
-    setIsDropdownOpen(false);
   };
 
   // Submit the selected trader
@@ -123,7 +106,7 @@ export default function TraderForm({
 
         {/* Trader Dropdown */}
         <div className="relative">
-          {isLoadingTraders ? (
+          {LoadingTraders ? (
             <p className="text-gray-500">Fetching traders...</p>
           ) : (
             <div className="relative">
@@ -134,7 +117,7 @@ export default function TraderForm({
                 className="bg-LightPBg text-black dark:text-white mb-7 mt-1 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-50"
               >
                 <option value="">Select Trader</option>
-                {traders.map((trader) => (
+                {tradersData.map((trader) => (
                   <option key={trader.id} value={trader.id}>
                     {trader.name}
                   </option>

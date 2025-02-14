@@ -45,7 +45,7 @@ const formsData = [
     id: 9,
     name: "Packaging",
     component: PackagingForm,
-    key: "goods",
+    key: "goods/packaging",
   },
   {
     id: 7,
@@ -57,7 +57,7 @@ const formsData = [
     id: 8,
     name: "Damage",
     component: DamageForm,
-    key: "goods",
+    key: "goods/damage",
   },
 ];
 
@@ -127,10 +127,10 @@ export default function StartConsignmentPage() {
           const FormComponent = form.component;
           // const isSubmitted = formStatuses[form.key];
           const isSubmitted =
-            form.key === "goods"
-              ? formStatuses.goods?.some(
-                  (item) => item?.damage || item?.packaging
-                )
+            form.key === "goods/packaging"
+              ? formStatuses.goods?.some((item) => item?.packaging)
+              : form.key === "goods/damage"
+              ? formStatuses.goods?.some((item) => item?.damage)
               : formStatuses[form.key];
           return (
             <div
@@ -188,6 +188,7 @@ export default function StartConsignmentPage() {
                       existingData={isSubmitted || null}
                       setFormStatuses={setFormStatuses}
                       setActiveAccordion={setActiveAccordion}
+                      formStatus={formStatuses}
                     />
                   </motion.div>
                 )}

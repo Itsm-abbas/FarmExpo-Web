@@ -1,5 +1,5 @@
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DataLoader from "@components/Loader/dataLoader";
 import { useState } from "react";
 import Formatter from "@utils/dateFormat";
@@ -7,8 +7,10 @@ import fonts from "@utils/fonts";
 import { MdDelete, MdEdit } from "react-icons/md";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 export default function AllConsignments() {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [filters, setFilters] = useState({
@@ -18,9 +20,12 @@ export default function AllConsignments() {
   });
 
   const { isLoading, error, data } = useQuery({
-    queryKey: ["allConsignments"],
-    queryFn: async () =>
-      fetch(`${apiUrl}/consignment`).then((res) => res.json()),
+    queryKey: ["consignments"],
+    queryFn: async () => {
+      const response = await axios.get(`${apiUrl}/consignment`);
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 5,
   });
 
   if (error) return "An error has occurred: " + error.message;
@@ -41,37 +46,38 @@ export default function AllConsignments() {
     return matchesDate && matchesStatus && matchesSearch;
   });
 
-  const handleDelete = async (id) => {
-    try {
-      const result = await Swal.fire({
-        title: "Are you sure?",
-        text: "Do you really want to delete this consignment? This action cannot be undone.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Yes, delete it!",
+  const deleteConsignmentMutation = useMutation({
+    mutationFn: async (id) => {
+      await axios.delete(`${apiUrl}/consignment/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["consignments"]);
+      Swal.fire({
+        position: "top-center",
+        icon: "success",
+        title: "Deleted!",
+        showConfirmButton: false,
+        timer: 1000,
       });
+    },
+    onError: (error) => {
+      Swal.fire("Error!", error.message, "error");
+    },
+  });
 
-      if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/consignment/${id}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) {
-          throw new Error("Failed to delete consignment.");
-        }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted!",
-          showConfirmButton: false,
-          timer: 1000,
-        });
-        refetch(); // Refresh the data after deletion
-      }
-    } catch (error) {
-      console.error("Error deleting consignment:", error);
-      Swal.fire("Error!", "Failed to delete the consignment.", "error");
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you really want to delete this consignment? This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (result.isConfirmed) {
+      deleteConsignmentMutation.mutate(id);
     }
   };
 

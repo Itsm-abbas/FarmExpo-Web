@@ -117,6 +117,7 @@ export default function DamageForm({
             </h2>
 
             <Input
+              type="number"
               id={`damage-${item.id}`}
               label="Damage"
               value={formData[item.id]}
@@ -133,7 +134,10 @@ export default function DamageForm({
               loadingStates[item.id]
                 ? "bg-[#A7F3D0] cursor-not-allowed"
                 : "bg-PrimaryButton hover:bg-PrimaryButtonHover"
-            } ${formData[item.id] && "bg-SecondaryButton hover:bg-SecondaryButtonHover"}`}
+            } ${
+              formData[item.id] &&
+              "bg-SecondaryButton hover:bg-SecondaryButtonHover"
+            }`}
             disabled={loadingStates[item.id]}
           >
             {loadingStates[item.id]

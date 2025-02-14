@@ -11,7 +11,8 @@ const SidebarLinks = [
         href: "/consignment/consignee/view-consignee",
       },
     ],
-  }, {
+  },
+  {
     name: "Commodity",
     links: [
       {
@@ -88,7 +89,8 @@ const SidebarLinks = [
         href: "/consignment/packaging/view-packaging",
       },
     ],
-  }, {
+  },
+  {
     name: "Consignment Item",
     links: [
       {
@@ -98,6 +100,19 @@ const SidebarLinks = [
       {
         name: "View Consignment Item",
         href: "/consignment/consignmentitem/view-consignmentitem",
+      },
+    ],
+  },
+  {
+    name: "Financial instrument",
+    links: [
+      {
+        name: "Add financial instrument",
+        href: "/consignment/add-financialinstrument",
+      },
+      {
+        name: "View financial instrument",
+        href: "/consignment/view-financial-instrument",
       },
     ],
   },

@@ -68,7 +68,7 @@ export default function Register() {
 
   return (
     <motion.div
-      className={`${fonts.poppins.className} min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
+      className={`${fonts.poppins.className} py-14 flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -85,7 +85,7 @@ export default function Register() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          Register for FarmExpo
+          Register
         </motion.h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">

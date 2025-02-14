@@ -7,6 +7,9 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import { motion } from "framer-motion";
 import moment from "moment";
+import { useQuery } from "@tanstack/react-query";
+import { fetchIata } from "@constants/consignmentAPI";
+import { useRouter } from "next/navigation";
 const MySwal = withReactContent(Swal);
 export default function AirwayBill({
   consignmentId,
@@ -15,6 +18,11 @@ export default function AirwayBill({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const router = useRouter();
+  const { data: iataAgentsData, isLoading: isLoadingAgents } = useQuery({
+    queryKey: ["IataAgents"],
+    queryFn: fetchIata,
+  });
   const [Billnumber, setBillNumber] = useState("");
   const [rate, setRate] = useState("");
   const [airwayBillWeight, setAirwayBillWeight] = useState("");
@@ -25,22 +33,21 @@ export default function AirwayBill({
   const [formattedDate, setFormattedDate] = useState("");
 
   // Selecting IATA Agent
-  const [selectedAgent, setSelectedAgent] = useState(null); // Selected IATA Agent
+  const [selectedIataAgent, setSelectedIataAgent] = useState(""); // Selected IATA Agent
   const [showDropdown, setShowDropdown] = useState(false); // Toggle dropdown visibility
-  const [iataAgents, setIataAgents] = useState([]); // IATA Agents fetched from API
-  const [loading, setLoading] = useState(false); // Loading state for API call
-  const [error, setError] = useState(null); // Error state for API call
+  const [submitLoading, setIsSubmitLoading] = useState(false); // Loading state for API call
+  const [error, setError] = useState(""); // Error state for API call
 
   const onChangeDate = (e) => {
     const selectedDate = new Date(e.target.value);
     setDate(selectedDate);
     setFormattedDate(selectedDate.toISOString().split("T")[0]);
   };
-  // When an agent is selected
-  const handleSelectAgent = (agentDetail) => {
-    setSelectedAgent(agentDetail);
-    setShowDropdown(false); // Close dropdown
-  };
+  // // When an agent is selected
+  // const handleSelectAgent = (agentDetail) => {
+  //   setSelectedAgent(agentDetail);
+  //   setShowDropdown(false); // Close dropdown
+  // };
   // Save Data
 
   const handleSubmit = async () => {
@@ -74,11 +81,11 @@ export default function AirwayBill({
         return;
       } // Check if there are changes in existing data - if not, return
     }
-    setLoading(true);
+    setIsSubmitLoading(true);
     try {
       const payload = {
         number: Billnumber,
-        iataAgent: selectedAgent, // Pass the selected agent
+        iataAgent: selectedIataAgent, // Pass the selected agent
         dateTime: moment(date).format("YYYY-MM-DDTHH:mm:ss"),
         rate,
         airwayBillWeight,
@@ -142,32 +149,19 @@ export default function AirwayBill({
         setFormattedDate("");
       }
     } catch (error) {
-      setLoading(false);
+      setIsSubmitLoading(false);
       MySwal.fire({
         icon: "error",
         title: "Error",
         text: "An error occurred while saving data.",
       });
     } finally {
-      setLoading(false);
+      setIsSubmitLoading(false);
     }
   };
 
   // Fetch IATA Agents
-  useEffect(() => {
-    const fetchIataAgents = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/iataagent`);
-        const data = await response.json();
-        setIataAgents(data); // Assuming data is an array of agents
-      } catch (error) {
-        console.error("Error fetching IATA agents:", error);
-        setError("Failed to load IATA agents.");
-      }
-    };
 
-    fetchIataAgents();
-  }, []);
   useEffect(() => {
     if (existingData) {
       setBillNumber(existingData.number || "");
@@ -182,6 +176,16 @@ export default function AirwayBill({
       );
     }
   }, [existingData]);
+
+  const handleIataagentsChange = (e) => {
+    const selectedId = e.target.value;
+    if (selectedId === "add-new-iataagent") {
+      router.push("/consignment/iata-agent/add-iataAgent");
+    } else {
+      const c = iataAgentsData.find((t) => t.id === parseInt(selectedId));
+      setSelectedIataAgent(c);
+    }
+  };
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -209,40 +213,45 @@ export default function AirwayBill({
         {/* IATA Agent Dropdown */}
 
         <div className="relative">
-          <label htmlFor="IATA" className="block mb-2 text-sm font-medium">
-            IATA Agent*
-          </label>
-          <button
-            className={`${
-              showDropdown
-                ? "border border-PrimaryButton"
-                : "border border-LightBorder dark:border-DarkBorder"
-            } w-full  p-2 rounded-md text-left`}
-            onClick={() => setShowDropdown(!showDropdown)}
-          >
-            {selectedAgent?.name || "Select IATA Agent"}
-          </button>
-          {showDropdown && (
-            <div className="absolute bg-LightSBg dark:bg-DarkSBg shadow-md border border-PrimaryButton mt-2 rounded-md z-10 max-h-60 overflow-y-auto w-full">
-              {loading ? (
-                <p className="p-4 text-gray-500">Loading...</p>
-              ) : error ? (
-                <p className="p-4 text-red-500">{error}</p>
-              ) : (
-                iataAgents.map((agent, index) => (
-                  <div
-                    key={index}
-                    className="p-2 hover:bg-LightPBg dark:hover:bg-DarkPBg cursor-pointer"
-                    onClick={() => handleSelectAgent(agent)}
-                  >
-                    {agent.name}
-                  </div>
-                ))
-              )}
-            </div>
+          {isLoadingAgents ? (
+            <motion.p
+              className="text-gray-500"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              Fetching IATA agents...
+            </motion.p>
+          ) : (
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.select
+                id="iataagents"
+                value={selectedIataAgent?.id || ""}
+                onChange={handleIataagentsChange}
+                className="bg-LightPBg text-black dark:text-white mb-7  block w-full border border-LightBorder dark:border-DarkBorder dark:bg-DarkInput rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-30 mt-7"
+                whileFocus={{ scale: 1.02 }}
+              >
+                <option value="">Select IATA Agent</option>
+                {iataAgentsData.map((iataagent) => (
+                  <option key={iataagent.id} value={iataagent.id}>
+                    {iataagent.name}
+                  </option>
+                ))}
+                <option
+                  value="add-new-iataagent"
+                  className="text-green-600 capitalize font-semibold cursor-pointer"
+                >
+                  + Add New IATA Agent
+                </option>
+              </motion.select>
+            </motion.div>
           )}
         </div>
-
         {/* Date Picker */}
 
         <Input
@@ -286,7 +295,7 @@ export default function AirwayBill({
         {/* Save Button */}
         <SaveButton
           handleSubmit={handleSubmit}
-          isLoading={loading}
+          isLoading={submitLoading}
           existingData={existingData}
           classes=""
         />

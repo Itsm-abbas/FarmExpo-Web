@@ -5,20 +5,21 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPackaging } from "@constants/consignmentAPI";
 
 const MySwal = withReactContent(Swal);
 
-export default function PackagingForm({
-  consignmentId,
-  setFormStatuses,
-  setActiveAccordion,
-}) {
+export default function PackagingForm({ consignmentId, setFormStatuses }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [loadingStates, setLoadingStates] = useState({});
   const [items, setItems] = useState([]);
-  const [packagingOptions, setPackagingOptions] = useState([]);
   const [formData, setFormData] = useState({});
+  const { data: packagingOptions, isLoading: LoadingPackaging } = useQuery({
+    queryKey: ["packaging"],
+    queryFn: fetchPackaging,
+  });
 
   // Fetch consignment data to get goods
   useEffect(() => {
@@ -44,22 +45,6 @@ export default function PackagingForm({
 
     fetchConsignmentData();
   }, [consignmentId]);
-
-  // Fetch packaging options
-  useEffect(() => {
-    const fetchPackaging = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/packaging`);
-        if (!response.ok) throw new Error("Failed to fetch packaging options.");
-        const data = await response.json();
-        setPackagingOptions(data);
-      } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
-      }
-    };
-
-    fetchPackaging();
-  }, []);
 
   // Handle save/update
   const handleSubmit = async (itemId) => {
@@ -131,7 +116,7 @@ export default function PackagingForm({
             {item.item.name}
           </h2>
 
-          <select
+          {/* <select
             id={`packaging-${item.id}`}
             value={formData[item.id] || ""}
             onChange={(e) => {
@@ -156,8 +141,47 @@ export default function PackagingForm({
             >
               + Add New Packaging
             </option>
-          </select>
-
+          </select> */}
+          <div className="relative">
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.select
+                id={`packaging-${item.id}`}
+                value={formData[item.id] || ""}
+                onChange={(e) => {
+                  const selectedValue = e.target.value;
+                  if (selectedValue === "add-new-packaging") {
+                    router.push("/consignment/packaging/add-packaging");
+                  } else {
+                    setFormData({ ...formData, [item.id]: selectedValue });
+                  }
+                }}
+                className="bg-LightPBg text-black dark:text-white mb-7  block w-full border border-LightBorder dark:border-DarkBorder dark:bg-DarkInput rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none relative z-30 mt-7"
+                whileFocus={{ scale: 1.02 }}
+              >
+                {LoadingPackaging ? (
+                  <option value="">Loading...</option>
+                ) : (
+                  <option value="">Select Packaging</option>
+                )}
+                {packagingOptions.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name}
+                  </option>
+                ))}
+                <option
+                  value="add-new-packaging"
+                  className="text-green-600 capitalize font-semibold cursor-pointer"
+                >
+                  + Add New Packaging
+                </option>
+              </motion.select>
+            </motion.div>
+          </div>
           <button
             onClick={() => handleSubmit(item.id)}
             className={`uppercase w-full px-4 py-2 rounded-md text-white transition-all duration-200 ${

@@ -60,7 +60,7 @@ export default function Login() {
 
   return (
     <motion.div
-      className={`${fonts.poppins.className} min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
+      className={`${fonts.poppins.className} py-14 flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -77,7 +77,7 @@ export default function Login() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          Login to FarmExpo
+          Login
         </motion.h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <motion.div
@@ -150,6 +150,18 @@ export default function Login() {
             whileTap={{ scale: 0.95 }}
           >
             {isLoading ? "Logging in..." : "Login"}
+          </motion.button>{" "}
+          <div className="space-y-3 uppercase flex justify-center items-center w-full">
+            or
+          </div>
+          <motion.button
+            type="button"
+            className="uppercase w-full px-4 py-2 rounded-md text-white bg-SecondaryButton hover:bg-SecondaryButtonHover disabled:bg-gray-400 disabled:text-black"
+            disabled={isLoading}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link href={"/auth/register"}>Create Account</Link>
           </motion.button>
         </form>
       </motion.div>

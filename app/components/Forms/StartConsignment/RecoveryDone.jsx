@@ -66,7 +66,7 @@ export default function RecoveryDoneForm({
         await UpdateConsignment(
           consignmentId,
           { recoveryDone: { id, ...formData } },
-          "Pending"
+          "Fulfilled"
         );
       }
       setFormStatuses((prev) => ({
@@ -105,6 +105,7 @@ export default function RecoveryDoneForm({
           <h2 className="text-xl font-semibold mb-8">Recovery</h2>
 
           <Input
+            type="number"
             id="amount"
             label="Amount"
             value={formData.amount}
@@ -115,7 +116,6 @@ export default function RecoveryDoneForm({
           />
           <Input
             id="currency"
-            label="Currency"
             value={formData.currency}
             onChange={(e) =>
               setFormData({ ...formData, currency: e.target.value })
@@ -123,8 +123,8 @@ export default function RecoveryDoneForm({
             placeholder="Enter currency"
           />
           <Input
+            type="number"
             id="exchangeRate"
-            label="Exchange Rate"
             value={formData.exchangeRate}
             onChange={(e) =>
               setFormData({ ...formData, exchangeRate: e.target.value })

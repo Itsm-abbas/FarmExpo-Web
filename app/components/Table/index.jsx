@@ -28,7 +28,7 @@ const ReusableTable = ({
         </h2>
 
         <div>
-          <table className="w-full min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-lg">
+          <table className="w-full  min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-lg">
             <thead>
               <tr className="bg-PrimaryButton text-white">
                 {headers.map((header, index) => (

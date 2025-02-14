@@ -6,13 +6,65 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import moment from "moment";
 import fonts from "@utils/fonts";
-
+import * as XLSX from "xlsx";
 const Invoice = () => {
   const params = useParams();
   const consignmentId = params.id;
   const [consignment, setConsignment] = useState(null);
   const [loading, setLoading] = useState(true);
+  // To excel
+  const exportToExcel = () => {
+    if (!consignment) return;
 
+    const invoiceData = [
+      ["Consignment ID", consignment.id],
+      ["Date", new Date(consignment.date).toLocaleDateString()],
+      [],
+      ["Trader Details"],
+      ["Name", consignment.trader.name],
+      ["Address", consignment.trader.address],
+      ["Country", consignment.trader.country],
+      ["NTN", consignment.trader.ntn],
+      [],
+      ["Consignee Details"],
+      ["Name", consignment.consignee.name],
+      ["Address", consignment.consignee.address],
+      ["Country", consignment.consignee.country],
+      [],
+      ["Goods"],
+      [
+        "Item",
+        "Quantity",
+        "Weight (kg)",
+        "Packaging",
+        "Commodity Cost",
+        "Packaging Cost",
+        "Damage",
+        "Total",
+      ],
+      ...consignment.goods.map((good) => [
+        good.item.name,
+        good.quantity,
+        good.weightPerUnit,
+        good.packaging.name,
+        good.commodityPerUnitCost,
+        good.packagingPerUnitCost,
+        good.damage,
+        (
+          good.commodityPerUnitCost * good.quantity +
+          good.packagingPerUnitCost * good.quantity
+        ).toFixed(2),
+      ]),
+      [],
+      ["Total Weight", consignment.localInvoiceWeight + " kg"],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(invoiceData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+
+    XLSX.writeFile(workbook, `invoice_consignment_${consignment.id}.xlsx`);
+  };
   // Fetch consignment data
   useEffect(() => {
     const fetchData = async () => {
@@ -49,7 +101,7 @@ const Invoice = () => {
       imgWidth,
       imgHeight
     );
-    pdf.save(`invoice_consignment_ {consignmentId}.pdf`);
+    pdf.save(`invoice_consignment_${consignmentId}.pdf`);
   };
 
   // Trigger print dialog
@@ -257,35 +309,39 @@ const Invoice = () => {
               <tr className="bg-gray-200 dark:bg-gray-700">
                 <th className="p-1 text-left">Item</th>
                 <th className="p-1 text-left">Qty</th>
-                <th className="p-1 text-left">Weight</th>
+                <th className="p-1 text-left">Total Weight</th>
                 <th className="p-1 text-left">Packaging</th>
-                <th className="p-1 text-left">Commodity</th>
-                <th className="p-1 text-left">Packaging Cost</th>
+                <th className="p-1 text-left">Total Commodity Cost</th>
+                <th className="p-1 text-left">Total Packaging Cost</th>
                 <th className="p-1 text-left">Damage</th>
-                <th className="p-1 text-left">Total</th>
+                <th className="p-1 text-left">Total Cost</th>
               </tr>
             </thead>
             <tbody>
-              {consignment.goods.map((good, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-200 dark:border-gray-700"
-                >
-                  <td className="p-1">{good.item.name}</td>
-                  <td className="p-1">{good.quantity}</td>
-                  <td className="p-1">{good.weightPerUnit} kg</td>
-                  <td className="p-1">{good.packaging.name}</td>
-                  <td className="p-1"> {good.commodityPerUnitCost}</td>
-                  <td className="p-1"> {good.packagingPerUnitCost}</td>
-                  <td className="p-1">{good.damage}</td>
-                  <td className="p-1">
-                    {(
-                      good.commodityPerUnitCost * good.quantity +
-                      good.packagingPerUnitCost * good.quantity
-                    ).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
+              {consignment.goods.map((good, index) => {
+                const totalWeight = good.weightPerUnit * good.quantity;
+                const totalCommodityCost =
+                  good.commodityPerUnitCost * good.quantity;
+                const totalPackagingCost =
+                  good.packagingPerUnitCost * good.quantity;
+                const totalCost = totalCommodityCost + totalPackagingCost;
+
+                return (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <td className="p-1">{good.item.name}</td>
+                    <td className="p-1">{good.quantity}</td>
+                    <td className="p-1">{totalWeight.toFixed(1)} kg</td>
+                    <td className="p-1">{good.packaging.name}</td>
+                    <td className="p-1">{totalCommodityCost}</td>
+                    <td className="p-1">{totalPackagingCost}</td>
+                    <td className="p-1">{good.damage.toFixed(2)}</td>
+                    <td className="p-1 font-bold">{totalCost.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -340,6 +396,14 @@ const Invoice = () => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={exportToExcel}
+          className="bg-[#217346] text-white px-4 py-2 rounded-lg shadow hover:bg-[#1A5A36] transition"
+        >
+          Export to Excel
+        </motion.button>{" "}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={generatePDF}
           className="bg-SecondaryButton text-white px-4 py-2 rounded-lg shadow-lg hover:bg-SecondaryButtonHover transition-all dark:bg-blue-500 dark:hover:bg-blue-600"
         >
@@ -349,7 +413,7 @@ const Invoice = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handlePrint}
-          className="bg-PrimaryButton text-white px-4 py-2 rounded-lg shadow-lg hover:bg-PrimaryButtonHover transition-all dark:bg-green-500 dark:hover:bg-green-600"
+          className="bg-[#4A4A4A] text-white px-4 py-2 rounded-lg shadow hover:bg-[#333333] transition"
         >
           Take Print
         </motion.button>

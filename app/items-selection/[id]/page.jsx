@@ -7,6 +7,7 @@ import font from "@utils/fonts";
 import DataLoader from "@components/Loader/dataLoader";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ItemSelectionPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -82,7 +83,6 @@ export default function ItemSelectionPage() {
 
     fetchData();
   }, [id]);
-  console.log(selectedItems);
   // Handle item selection
   const handleItemSelect = (item) => {
     setSelectedItems((prev) =>

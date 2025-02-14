@@ -26,6 +26,8 @@ import ViewConsignee from "@components/ViewData/Consignee";
 import ViewConsignmentItem from "@components/ViewData/ConsignmentItem";
 import { FaArrowLeft } from "react-icons/fa";
 import AllConsignments from "@components/ViewData/AllConsignments";
+import FinancialInstrumentForm from "@components/Forms/FinancialInstrument";
+import ViewFI from "@components/ViewData/Financialinstrument";
 // Add other imports here...
 
 export default function DynamicConsignmentPage() {
@@ -50,6 +52,9 @@ export default function DynamicConsignmentPage() {
     "trader/view-trader": ViewTrader,
     "consignmentitem/add-consignmentitem": ConsignmentItemForm,
     "consignmentitem/view-consignmentitem": ViewConsignmentItem,
+    "add-financialinstrument": FinancialInstrumentForm,
+    "view-financial-instrument": ViewFI,
+
     "all-consignments": AllConsignments,
 
     // Add other mappings here...

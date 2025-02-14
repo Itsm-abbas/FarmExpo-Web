@@ -26,6 +26,7 @@ export default {
         DarkPText: "#F3F4F6",
         DarkSText: "#9CA3AF",
         DarkSidebar: "#374151",
+        DarkInput: "#2d3748",
         //Button
         PrimaryButton: "#10B981",
         PrimaryButtonHover: "#059669",
@@ -38,5 +39,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwind-scrollbar")],
 };

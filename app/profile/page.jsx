@@ -54,7 +54,7 @@ export default function ProfileSettings() {
 
   return (
     <motion.div
-      className={`${fonts.poppins.className} min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
+      className={`${fonts.poppins.className} flex items-center justify-center py-14 bg-gray-100 dark:bg-gray-800`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
