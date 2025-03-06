@@ -6,6 +6,7 @@ import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import UpdateConsignment from "@utils/updateConsignment";
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 
 export default function RecoveryDoneForm({
@@ -20,7 +21,7 @@ export default function RecoveryDoneForm({
     exchangeRate: "",
   });
   const [isLoading, setIsLoading] = useState(false); // Loader state
-
+  const token = getCookie("token");
   const handleSubmit = async () => {
     if (!formData.amount || !formData.currency || !formData.exchangeRate) {
       MySwal.fire({
@@ -52,7 +53,10 @@ export default function RecoveryDoneForm({
         `${process.env.NEXT_PUBLIC_API_URL}/recovery-done`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(formData),
         }
       );

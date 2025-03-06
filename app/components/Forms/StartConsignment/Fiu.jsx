@@ -7,8 +7,8 @@ import Input from "@components/Input";
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { fetchFinancialInstrument, fetchFiu } from "@constants/consignmentAPI";
+import axiosInstance from "@utils/axiosConfig";
 
 const MySwal = withReactContent(Swal);
 
@@ -55,10 +55,10 @@ const FIU = ({ setShowFinancialUtilization, formStatus }) => {
       };
       if (foundUtilization?.id) {
         // Update existing FIU
-        return axios.put(`${apiUrl}/fiu/${foundUtilization.id}`, payload);
+        return axiosInstance.put(`/fiu/${foundUtilization.id}`, payload);
       } else {
         // Create new FIU
-        return axios.post(`${apiUrl}/fiu`, payload);
+        return axiosInstance.post(`/fiu`, payload);
       }
     },
     onSuccess: () => {
@@ -71,7 +71,6 @@ const FIU = ({ setShowFinancialUtilization, formStatus }) => {
       setShowFinancialUtilization(false);
     },
     onError: (error) => {
-      console.log(error);
       MySwal.fire({
         icon: "error",
         title: "Error",

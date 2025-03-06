@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import DataLoader from "@components/Loader/dataLoader";
 import Swal from "sweetalert2";
 import { useEffect, useState } from "react";
@@ -11,14 +10,12 @@ import fonts from "@utils/fonts";
 import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 import { AnimatePresence, motion } from "framer-motion";
 import LinkButton from "@components/Button/LinkButton";
-import { fetchConsignments } from "@constants/consignmentAPI";
-import { getCookie } from "cookies-next";
+import { fetchConsignments, fetchUser } from "@constants/consignmentAPI";
 import axiosInstance from "@utils/axiosConfig";
 
 export default function Home() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [greeting, setGreeting] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const [selectedDate, setSelectedDate] = useState(""); // State to store the selected date
@@ -28,7 +25,10 @@ export default function Home() {
     queryKey: ["consignments"],
     queryFn: fetchConsignments,
   });
-
+  const { data: userData } = useQuery({
+    queryKey: ["user"],
+    queryFn: fetchUser,
+  });
   // Mutation for starting a new consignment
   const startConsignmentMutation = useMutation({
     mutationFn: async (date) => {
@@ -190,18 +190,16 @@ export default function Home() {
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          {greeting && (
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold gap-2 ">
-              <motion.span>{greeting}!</motion.span>{" "}
-              <motion.span
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                Abbas
-              </motion.span>
-            </h1>
-          )}
+          <h1 className="text-3xl sm:text-3xl md:text-5xl font-bold gap-2 flex flex-wrap">
+            <motion.span>{greeting}!</motion.span>{" "}
+            <motion.span
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {userData?.fullName.trim().split(" ")[0]}
+            </motion.span>
+          </h1>
           <motion.button
             onClick={openModal} // Open the modal on button click
             className={`${fonts.poppins.className} cursor-pointer text-sm sm:text-base flex gap-2 items-center px-4 sm:px-6 py-3 bg-PrimaryButton hover:bg-PrimaryButtonHover text-white rounded-lg transition`}

@@ -8,6 +8,7 @@ import Input from "@components/Input";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCustomAgents } from "@constants/consignmentAPI";
 import { motion } from "framer-motion";
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 
 export default function CustomClearence({
@@ -17,6 +18,7 @@ export default function CustomClearence({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const token = getCookie("token");
   const [fee, setFee] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCustomAgent, setSelectedCustomAgent] = useState(null); // Selected custom agent
@@ -69,7 +71,10 @@ export default function CustomClearence({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 

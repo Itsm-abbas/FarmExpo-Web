@@ -3,7 +3,7 @@ import { getCookie } from "cookies-next";
 const token = getCookie("token");
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 10000, // Request timeout
+  // timeout: 10000, // Request timeout
 });
 
 // Add request interceptors (e.g., for adding headers)

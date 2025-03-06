@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Input from "@components/Input";
+import { getCookie } from "cookies-next";
 
 const MySwal = withReactContent(Swal);
 
@@ -13,6 +14,7 @@ export default function DamageForm({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const token = getCookie("token");
   const [loadingStates, setLoadingStates] = useState({}); // Track loading per item
   const [items, setItems] = useState([]);
   const [formData, setFormData] = useState({});
@@ -21,7 +23,12 @@ export default function DamageForm({
   useEffect(() => {
     const fetchConsignmentData = async () => {
       try {
-        const response = await fetch(`${apiUrl}/consignment/${consignmentId}`);
+        const response = await fetch(`${apiUrl}/consignment/${consignmentId}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch consignment data.");
         const data = await response.json();
         setItems(data.goods || []);
@@ -70,7 +77,10 @@ export default function DamageForm({
 
       const response = await fetch(`${apiUrl}/consignmentitem/${itemId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(updatedItem),
       });
 

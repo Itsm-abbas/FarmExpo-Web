@@ -21,7 +21,6 @@ export default function TraderForm({
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [selectedTrader, setSelectedTrader] = useState(null);
-  const [isLoadingTraders, setIsLoadingTraders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Fetch traders from API
   const { data: tradersData, isLoading: LoadingTraders } = useQuery({

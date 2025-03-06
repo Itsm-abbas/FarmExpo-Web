@@ -7,11 +7,12 @@ import withReactContent from "sweetalert2-react-content";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPackaging } from "@constants/consignmentAPI";
-
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 
 export default function PackagingForm({ consignmentId, setFormStatuses }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const token = getCookie("token");
   const router = useRouter();
   const [loadingStates, setLoadingStates] = useState({});
   const [items, setItems] = useState([]);
@@ -25,7 +26,12 @@ export default function PackagingForm({ consignmentId, setFormStatuses }) {
   useEffect(() => {
     const fetchConsignmentData = async () => {
       try {
-        const response = await fetch(`${apiUrl}/consignment/${consignmentId}`);
+        const response = await fetch(`${apiUrl}/consignment/${consignmentId}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch consignment data.");
         const data = await response.json();
         setItems(data.goods || []);
@@ -70,7 +76,10 @@ export default function PackagingForm({ consignmentId, setFormStatuses }) {
 
       const response = await fetch(`${apiUrl}/consignmentitem/${itemId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(updatedItem),
       });
 

@@ -8,7 +8,7 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import { motion } from "framer-motion";
 import FIU from "./Fiu";
-
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 
 export default function GoodsDeclarationForm({
@@ -18,7 +18,7 @@ export default function GoodsDeclarationForm({
   formStatus,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
+  const token = getCookie("token");
   const [formData, setFormData] = useState({
     number: "",
     date: "",
@@ -85,17 +85,18 @@ export default function GoodsDeclarationForm({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
 
       const { id } = await response.json();
       if (!existingData) {
-        await UpdateConsignment(
-          consignmentId,
-          { goodsDeclaration: { id, ...formData } },
-          "Pending"
-        );
+        await UpdateConsignment(consignmentId, {
+          goodsDeclaration: { id, ...formData },
+        });
       }
 
       setFormStatuses((prev) => ({

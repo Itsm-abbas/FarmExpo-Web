@@ -3,6 +3,7 @@ import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { fetchCustomAgents } from "@constants/consignmentAPI";
 import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
@@ -25,7 +26,7 @@ const ViewCustomAgent = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`/customagent/${id}`);
+        const response = await axiosInstance.delete(`/customagent/${id}`);
         if (!response.ok) {
           throw new Error("Failed to delete customagent.");
         }

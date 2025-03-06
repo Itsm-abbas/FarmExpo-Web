@@ -93,19 +93,19 @@ export default function Header() {
 
         <div className="flex gap-8 max-sm:gap-4 relative" ref={dropdownRef}>
           <motion.button
-            className={`${font.poppins.className} text-white flex items-center gap-3 md:bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 md:px-4 md:py-2 rounded-md rounded-r-xl`}
+            className={`${font.poppins.className} text-white flex items-center gap-3 bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 px-2 py-1 md:px-4 md:py-2 rounded-md rounded-r-xl`}
             onClick={toggleDropdown}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <p className="hidden md:block">{data?.fullName}</p>
+            <p className="truncate">{data?.fullName.trim().split(" ")[0]}</p>
           </motion.button>
 
           {/* Profile Dropdown */}
           <AnimatePresence>
             {isDropdownOpen && (
               <motion.div
-                className="absolute right-0 top-14 bg-white dark:bg-DarkSBg shadow-lg rounded-md w-48 p-2 text-black dark:text-white"
+                className="absolute right-0 top-10 md:top-14 bg-white dark:bg-DarkSBg shadow-lg rounded-md w-36 md:w-48 p-1 md:p-2 text-black dark:text-white"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -114,13 +114,13 @@ export default function Header() {
                 <Link
                   onClick={() => setIsDropdownOpen(false)}
                   href="/profile"
-                  className="block px-4 py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
+                  className="block px-2 md:px-4 py-1 md:py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
                 >
-                  Profile Settings
+                  Settings
                 </Link>
                 <button
                   onClick={() => LogoutUser()}
-                  className="block w-full text-left px-4 py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
+                  className="block w-full text-left px-2 md:px-4 py-1 md:py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
                 >
                   Logout
                 </button>

@@ -1,15 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import UpdateConsignment from "@utils/updateConsignment";
-import Link from "next/link";
 import { fetchPackers } from "@constants/consignmentAPI";
 import { useQuery } from "@tanstack/react-query";
-
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 const Packing = ({
   consignmentId,
@@ -18,6 +17,7 @@ const Packing = ({
   setActiveAccordion,
 }) => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const token = getCookie("token");
   const [ratePerKg, setRatePerKg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPacker, setSelectedPacker] = useState(null);
@@ -52,7 +52,10 @@ const Packing = ({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 

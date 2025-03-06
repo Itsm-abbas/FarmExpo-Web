@@ -15,14 +15,11 @@ import {
   FaChevronUp,
 } from "react-icons/fa";
 import GoodsDeclarationForm from "@forms/StartConsignment/GoodsDeclaration";
-import Swal from "sweetalert2";
 import font from "@utils/fonts";
 import Link from "next/link";
 import DamageForm from "@components/Forms/StartConsignment/Damage";
 import { motion, AnimatePresence } from "framer-motion";
 import PackagingForm from "@components/Forms/StartConsignment/Packaging";
-import DataLoader from "@components/Loader/dataLoader";
-import LinkButton from "@components/Button/LinkButton";
 import axiosInstance from "@utils/axiosConfig";
 
 const formsData = [

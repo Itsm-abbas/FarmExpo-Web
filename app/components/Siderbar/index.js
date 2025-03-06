@@ -7,8 +7,14 @@ import { FaArrowRight, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { SidebarLinks } from "@constants/Links";
 import fonts from "@utils/fonts";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { fetchUser } from "@constants/consignmentAPI";
 
 export default function Sidebar({ isSidebarOpen, onClose }) {
+  const { data } = useQuery({
+    queryKey: ["user"],
+    queryFn: fetchUser,
+  });
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const toggleDropdown = (index) => {
@@ -57,7 +63,9 @@ export default function Sidebar({ isSidebarOpen, onClose }) {
             height={70}
             alt="profile"
           />
-          <p className="mt-2 font-semibold text-base sm:text-lg">Abbas</p>
+          <p className="mt-2 font-semibold text-base sm:text-lg">
+            {data?.fullName}
+          </p>
         </div>
 
         <nav className="flex flex-col space-y-4 p-4">

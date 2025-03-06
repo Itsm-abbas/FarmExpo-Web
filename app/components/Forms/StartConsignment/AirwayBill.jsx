@@ -10,6 +10,7 @@ import moment from "moment";
 import { useQuery } from "@tanstack/react-query";
 import { fetchIata } from "@constants/consignmentAPI";
 import { useRouter } from "next/navigation";
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 export default function AirwayBill({
   consignmentId,
@@ -18,6 +19,7 @@ export default function AirwayBill({
   setActiveAccordion,
 }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const token = getCookie("token");
   const router = useRouter();
   const { data: iataAgentsData, isLoading: isLoadingAgents } = useQuery({
     queryKey: ["IataAgents"],
@@ -56,7 +58,7 @@ export default function AirwayBill({
       !fee ||
       !rate ||
       !airwayBillWeight ||
-      selectedAgent === null
+      selectedIataAgent === null
     ) {
       MySwal.fire({
         icon: "error",
@@ -68,7 +70,7 @@ export default function AirwayBill({
     if (existingData) {
       if (
         Billnumber === existingData.number &&
-        selectedAgent?.name === existingData?.iataAgent.name &&
+        selectedIataAgent?.name === existingData?.iataAgent.name &&
         rate === existingData.rate &&
         airwayBillWeight === existingData.airwayBillWeight &&
         fee === existingData.fee
@@ -98,18 +100,19 @@ export default function AirwayBill({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 
       const { id } = await response.json();
 
       if (!existingData) {
-        await UpdateConsignment(
-          consignmentId,
-          { airwayBill: { id, ...payload } },
-          "Pending"
-        );
+        await UpdateConsignment(consignmentId, {
+          airwayBill: { id, ...payload },
+        });
       }
       // if (!existingData) {
       //   await UpdateConsignment(consignmentId, {
@@ -145,7 +148,7 @@ export default function AirwayBill({
         setRate("");
         setAirwayBillWeight("");
         setFee("");
-        setSelectedAgent("");
+        setSelectedIataAgent("");
         setFormattedDate("");
       }
     } catch (error) {
@@ -160,15 +163,13 @@ export default function AirwayBill({
     }
   };
 
-  // Fetch IATA Agents
-
   useEffect(() => {
     if (existingData) {
       setBillNumber(existingData.number || "");
       setRate(existingData.rate || "");
       setAirwayBillWeight(existingData.airwayBillWeight || "");
       setFee(existingData.fee || "");
-      setSelectedAgent(existingData.iataAgent || null);
+      setSelectedIataAgent(existingData.iataAgent || null);
       setFormattedDate(
         existingData.dateTime
           ? moment(existingData.dateTime).format("YYYY-MM-DD")
