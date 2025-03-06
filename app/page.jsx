@@ -6,12 +6,14 @@ import axios from "axios";
 import DataLoader from "@components/Loader/dataLoader";
 import Swal from "sweetalert2";
 import { useEffect, useState } from "react";
-import { FaArrowRight, FaWindowClose } from "react-icons/fa";
+import { FaArrowRight, FaEye, FaWindowClose } from "react-icons/fa";
 import fonts from "@utils/fonts";
 import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 import { AnimatePresence, motion } from "framer-motion";
 import LinkButton from "@components/Button/LinkButton";
 import { fetchConsignments } from "@constants/consignmentAPI";
+import { getCookie } from "cookies-next";
+import axiosInstance from "@utils/axiosConfig";
 
 export default function Home() {
   const router = useRouter();
@@ -30,7 +32,7 @@ export default function Home() {
   // Mutation for starting a new consignment
   const startConsignmentMutation = useMutation({
     mutationFn: async (date) => {
-      const response = await axios.post(`${apiUrl}/consignment`, {
+      const response = await axiosInstance.post(`/consignment`, {
         date: date,
         status: "Not started",
       });
@@ -47,7 +49,7 @@ export default function Home() {
   // Mutation for deleting a consignment
   const deleteConsignmentMutation = useMutation({
     mutationFn: async (id) => {
-      await axios.delete(`${apiUrl}/consignment/${id}`);
+      await axiosInstance.delete(`/consignment/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["consignments"]);
@@ -133,7 +135,6 @@ export default function Home() {
       transition={{ duration: 0.5 }}
     >
       {/* Modal */}
-
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
@@ -181,7 +182,6 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-
       <div className="flex flex-col md:flex-row gap-24 md:gap-8 md:justify-between">
         {/* Left Section */}
         <motion.div
@@ -217,6 +217,16 @@ export default function Home() {
               "Start New Consignment"
             )}{" "}
             {!startConsignmentMutation.isPending && <FaArrowRight />}
+          </motion.button>
+          <motion.button
+            onClick={() => router.push("/selectLedger")}
+            className={`${fonts.poppins.className} cursor-pointer text-sm sm:text-base flex gap-2 items-center px-3 sm:px-5 py-2 bg-SecondaryButton hover:bg-SecondaryButtonHover text-white rounded-lg transition`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={startConsignmentMutation.isPending}
+          >
+            View Ledger
+            <FaEye />
           </motion.button>
         </motion.div>
 

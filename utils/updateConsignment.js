@@ -1,8 +1,16 @@
+import { getCookie } from "cookies-next";
 const UpdateConsignment = async (consignmentId, updatedFields, status) => {
+  const token = getCookie("token");
   try {
     // Fetch the existing consignment details
     const existingResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/consignment/${consignmentId}`
+      `${process.env.NEXT_PUBLIC_API_URL}/consignment/${consignmentId}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     if (!existingResponse.ok) {
       throw new Error("Failed to fetch existing consignment.");
@@ -22,6 +30,7 @@ const UpdateConsignment = async (consignmentId, updatedFields, status) => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(updatedConsignment),
       }

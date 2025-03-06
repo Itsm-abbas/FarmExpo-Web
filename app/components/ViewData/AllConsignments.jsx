@@ -7,12 +7,12 @@ import fonts from "@utils/fonts";
 import { MdDelete, MdEdit } from "react-icons/md";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
-import axios from "axios";
+import { fetchConsignments } from "@constants/consignmentAPI";
+import axiosInstance from "@utils/axiosConfig";
 
 export default function AllConsignments() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [filters, setFilters] = useState({
     date: "",
     status: "",
@@ -21,10 +21,7 @@ export default function AllConsignments() {
 
   const { isLoading, error, data } = useQuery({
     queryKey: ["consignments"],
-    queryFn: async () => {
-      const response = await axios.get(`${apiUrl}/consignment`);
-      return response.data;
-    },
+    queryFn: fetchConsignments,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -48,7 +45,7 @@ export default function AllConsignments() {
 
   const deleteConsignmentMutation = useMutation({
     mutationFn: async (id) => {
-      await axios.delete(`${apiUrl}/consignment/${id}`);
+      await axiosInstance.delete(`/consignment/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["consignments"]);

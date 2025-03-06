@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PackagingForm from "@components/Forms/StartConsignment/Packaging";
 import DataLoader from "@components/Loader/dataLoader";
 import LinkButton from "@components/Button/LinkButton";
+import axiosInstance from "@utils/axiosConfig";
 
 const formsData = [
   { id: 1, name: "Consignee", component: ConsigneeForm, key: "consignee" },
@@ -70,10 +71,8 @@ export default function StartConsignmentPage() {
   const [itemsLength, setItemsLength] = useState(0);
   const fetchFormStatuses = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/consignment/${consignmentId}`
-      );
-      const data = await response.json();
+      const response = await axiosInstance.get(`/consignment/${consignmentId}`);
+      const { data } = response;
       setFormStatuses(data);
       setItemsLength(data.goods.length);
     } catch (error) {

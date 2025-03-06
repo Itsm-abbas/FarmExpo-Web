@@ -1,6 +1,5 @@
 import "./globals.css";
 import Providers from "@utils/provider";
-import Header from "@components/Header";
 import font from "@utils/fonts";
 import { ThemeProvider } from "../context/ThemeContext";
 
@@ -16,10 +15,7 @@ export default function RootLayout({ children }) {
         className={`${font.raleway.className} bg-LightPBg dark:bg-DarkPBg text-LightPText dark:text-DarkPText`}
       >
         <ThemeProvider>
-          <Header />
-          <div className=" px-5 sm:px-8 md:px-16 ">
-            <Providers>{children}</Providers>
-          </div>
+          <Providers>{children}</Providers>
         </ThemeProvider>
       </body>
     </html>

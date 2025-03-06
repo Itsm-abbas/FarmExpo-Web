@@ -5,7 +5,9 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import fonts from "@utils/fonts";
+import { setCookie } from "cookies-next";
 
 export default function Login() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -13,6 +15,7 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,23 +37,24 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        throw new Error("Invalid credentials, please try again.");
+        const errorMessage = await response.json();
+        throw new Error(
+          errorMessage.description || "Invalid credentials, please try again."
+        );
       }
 
       const result = await response.json();
-      // Save token
-      if (rememberMe) {
-        localStorage.setItem("token", result.token);
-      } else {
-        sessionStorage.setItem("token", result.token);
+      if (result.token) {
+        setCookie("token", result.token, { secure: true });
       }
-
-      Swal.fire({
+      const s = await Swal.fire({
         icon: "success",
         title: "Success",
-        text: "Logged in successfully!",
+        text: "Logged in successfully! Click Ok to go to Home page",
       });
-      router.push("/dashboard");
+      if (s.isConfirmed) {
+        router.push("/");
+      }
     } catch (error) {
       Swal.fire({ icon: "error", title: "Error", text: error.message });
     } finally {
@@ -108,17 +112,30 @@ export default function Login() {
             <label className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300">
               Password
             </label>
-            <motion.input
-              type="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-              className="text-black dark:text-white mb-4 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none"
-              whileFocus={{ scale: 1.02 }}
-              required
-            />
+            <div className="relative">
+              <motion.input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                className="text-black dark:text-white mb-4 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 pr-10 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none"
+                whileFocus={{ scale: 1.02 }}
+                required
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <FaEyeSlash className="h-5 w-5" />
+                ) : (
+                  <FaEye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </motion.div>
           <motion.div
             className="flex items-center justify-between"
@@ -150,19 +167,21 @@ export default function Login() {
             whileTap={{ scale: 0.95 }}
           >
             {isLoading ? "Logging in..." : "Login"}
-          </motion.button>{" "}
+          </motion.button>
           <div className="space-y-3 uppercase flex justify-center items-center w-full">
             or
           </div>
-          <motion.button
-            type="button"
-            className="uppercase w-full px-4 py-2 rounded-md text-white bg-SecondaryButton hover:bg-SecondaryButtonHover disabled:bg-gray-400 disabled:text-black"
-            disabled={isLoading}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link href={"/auth/register"}>Create Account</Link>
-          </motion.button>
+
+          <Link href="/auth/signup">
+            <motion.button
+              type="submit"
+              className="uppercase w-full px-4 py-2 rounded-md text-white bg-SecondaryButton hover:bg-SecondaryButtonHover mt-4"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Create Account
+            </motion.button>
+          </Link>
         </form>
       </motion.div>
     </motion.div>

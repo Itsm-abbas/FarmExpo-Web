@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import Input from "@components/Input";
@@ -11,8 +11,10 @@ import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
 import { fetchConsignees, fetchTraders } from "@constants/consignmentAPI";
 import { useSearchParams } from "next/navigation";
+import axiosInstance from "@utils/axiosConfig";
 
 export default function FinancialInstrumentForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Extract the ID from query params
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -34,21 +36,13 @@ export default function FinancialInstrumentForm() {
   });
 
   // Fetch Traders
-  const {
-    data: traders = [],
-    isLoading: tradersLoading,
-    error: tradersError,
-  } = useQuery({
+  const { data: traders = [], isLoading: tradersLoading } = useQuery({
     queryKey: ["traders"],
     queryFn: fetchTraders,
   });
 
   // Fetch Consignees
-  const {
-    data: consignees = [],
-    isLoading: consigneesLoading,
-    error: consigneesError,
-  } = useQuery({
+  const { data: consignees = [], isLoading: consigneesLoading } = useQuery({
     queryKey: ["consignees"],
     queryFn: fetchConsignees,
   });
@@ -56,29 +50,35 @@ export default function FinancialInstrumentForm() {
   // Mutation for submitting data
   const mutation = useMutation({
     mutationFn: async (newData) => {
-      return await axios.post(`${apiUrl}/financialinstrument`, newData);
+      return await axiosInstance.post(`/financialinstrument`, newData);
     },
-    onSuccess: () => {
-      Swal.fire({
+    onSuccess: async () => {
+      const result = await Swal.fire({
         icon: "success",
         title: "Success",
-        text: "Financial Instrument added successfully!",
+        text: id
+          ? "Financial instrument updated successfully."
+          : "Financial instrument added successfully.",
       });
-
-      setFormData({
-        number: "",
-        trader: "",
-        mode: "",
-        consignee: "",
-        currency: "",
-        localDate: "",
-        expiryDate: "",
-        status: "",
-        amount: "",
-        balance: "",
-        iban: "",
-        deliveryTerm: "",
-      });
+      if (result.isConfirmed) {
+        router.push("view-financial-instrument");
+      }
+      if (!id) {
+        setFormData({
+          number: "",
+          trader: "",
+          mode: "",
+          consignee: "",
+          currency: "",
+          localDate: "",
+          expiryDate: "",
+          status: "",
+          amount: "",
+          balance: "",
+          iban: "",
+          deliveryTerm: "",
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ["financialInstruments"] });
     },
@@ -124,14 +124,16 @@ export default function FinancialInstrumentForm() {
     if (id) {
       const fetchFI = async () => {
         try {
-          const response = await fetch(`${apiUrl}/financialinstrument/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(
+            `/financialinstrument/${id}`
+          );
+          const { data } = response;
           setFormData(data);
         } catch (error) {
           Swal.fire({
             icon: "error",
             title: "Error",
-            text: "Failed to fetch consingee details.",
+            text: "Failed to fetch FI details.",
           });
         }
       };

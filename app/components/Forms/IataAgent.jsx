@@ -8,7 +8,10 @@ import { FaEye } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import LinkButton from "@components/Button/LinkButton";
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 export default function IataAgent() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -34,7 +37,10 @@ export default function IataAgent() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ name, station }),
       });
 
@@ -72,8 +78,8 @@ export default function IataAgent() {
       // Fetch the existing IataAgent data
       const fetchIataAgent = async () => {
         try {
-          const response = await fetch(`${apiUrl}/iataagent/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/iataagent/${id}`);
+          const { data } = response;
           setName(data?.name);
           setStation(data?.station);
         } catch (error) {

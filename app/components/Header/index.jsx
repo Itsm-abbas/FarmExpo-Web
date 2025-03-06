@@ -8,8 +8,18 @@ import { FaBars, FaTimes } from "react-icons/fa";
 import ThemeToggle from "../ThemeToggle";
 import Sidebar from "../Siderbar";
 import { motion, AnimatePresence } from "framer-motion";
+import { deleteCookie } from "cookies-next";
+import { useRouter } from "next/navigation";
+import { fetchUser } from "@constants/consignmentAPI";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Header() {
+  const { data } = useQuery({
+    queryKey: ["user"],
+    queryFn: fetchUser,
+  });
+  const queryClient = useQueryClient();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null); // Added ref for dropdown
@@ -34,6 +44,13 @@ export default function Header() {
     };
   }, [isDropdownOpen]);
 
+  const LogoutUser = () => {
+    setIsDropdownOpen(false);
+    deleteCookie("token");
+    queryClient.removeQueries(["user"]);
+    queryClient.clear(); // Extra cache clearing for safety
+    router.replace("/auth/login");
+  };
   return (
     <>
       {/* Header */}
@@ -76,19 +93,12 @@ export default function Header() {
 
         <div className="flex gap-8 max-sm:gap-4 relative" ref={dropdownRef}>
           <motion.button
-            className={`${font.poppins.className} text-white flex items-center gap-3 md:bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 md:pr-6 rounded-l-full rounded-r-full`}
+            className={`${font.poppins.className} text-white flex items-center gap-3 md:bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all duration-200 md:px-4 md:py-2 rounded-md rounded-r-xl`}
             onClick={toggleDropdown}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Image
-              className="rounded-full border-2 border-white"
-              src="/profile.png"
-              width={40}
-              height={40}
-              alt="profile"
-            />
-            <p className="hidden md:block">Abbas</p>
+            <p className="hidden md:block">{data?.fullName}</p>
           </motion.button>
 
           {/* Profile Dropdown */}
@@ -109,7 +119,7 @@ export default function Header() {
                   Profile Settings
                 </Link>
                 <button
-                  onClick={() => setIsDropdownOpen(false)}
+                  onClick={() => LogoutUser()}
                   className="block w-full text-left px-4 py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
                 >
                   Logout

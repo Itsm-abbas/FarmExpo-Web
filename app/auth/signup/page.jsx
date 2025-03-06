@@ -11,6 +11,7 @@ export default function Register() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [formData, setFormData] = useState({
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -20,7 +21,12 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.email || !formData.password || !formData.confirmPassword) {
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -40,17 +46,20 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/auth/register`, {
+      const response = await fetch(`${apiUrl}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          fullName: formData.fullName,
         }),
       });
-
       if (!response.ok) {
-        throw new Error("Registration failed, please try again.");
+        const errorMessage = await response.json(); // Get detailed error
+        throw new Error(
+          errorMessage.description || "Registration failed, please try again."
+        );
       }
 
       Swal.fire({
@@ -95,6 +104,30 @@ export default function Register() {
             transition={{ delay: 0.3 }}
           >
             <label
+              htmlFor="fullName"
+              className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300"
+            >
+              Full Name
+            </label>
+            <motion.input
+              id="fullName"
+              type="text"
+              placeholder="Enter your full name"
+              value={formData.fullName}
+              onChange={(e) =>
+                setFormData({ ...formData, fullName: e.target.value })
+              }
+              className="text-black dark:text-white mb-4 block w-full border border-LightBorder dark:border-DarkBorder dark:bg-[#2d3748] rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none"
+              whileFocus={{ scale: 1.02 }}
+              required
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <label
               htmlFor="email"
               className="block mb-2 text-sm font-medium text-gray-600 dark:text-gray-300"
             >
@@ -113,7 +146,6 @@ export default function Register() {
               required
             />
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -138,7 +170,6 @@ export default function Register() {
               required
             />
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -163,7 +194,6 @@ export default function Register() {
               required
             />
           </motion.div>
-
           <motion.button
             type="submit"
             className="uppercase w-full px-4 py-2 rounded-md text-white bg-PrimaryButton hover:bg-PrimaryButtonHover disabled:bg-gray-400 disabled:text-black"

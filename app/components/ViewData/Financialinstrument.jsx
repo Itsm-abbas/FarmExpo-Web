@@ -3,14 +3,12 @@ import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { fetchFinancialInstrument } from "@constants/consignmentAPI";
 import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewFI = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [editLoader, setEditLoader] = useState(false);
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["financialinstrument"],
     queryFn: fetchFinancialInstrument,
@@ -29,9 +27,9 @@ const ViewFI = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/financialinstrument/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(
+          `/financialinstrument/${id}`
+        );
         if (!response.ok) {
           throw new Error(`Error: ${response.status} - ${response.statusText}`);
         }

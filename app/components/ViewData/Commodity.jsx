@@ -1,24 +1,20 @@
 //components/ViewData/Commodity.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchCommodity } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewCommodity = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchCommodity = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/commodity`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
 
+  const { isLoading, data } = useQuery({
+    queryKey: ["consignments"],
+    queryFn: fetchCommodity,
+  });
   const handleDelete = async (id) => {
     try {
       const result = await Swal.fire({
@@ -32,12 +28,8 @@ const ViewCommodity = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/commodity/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/commodity/${id}`);
         if (!response.ok) {
-          console.log("id: " + id);
-          console.log(response);
           throw new Error("Failed to delete commodity.");
         }
         Swal.fire({
@@ -47,7 +39,6 @@ const ViewCommodity = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchCommodity();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -56,9 +47,7 @@ const ViewCommodity = () => {
   const handleEdit = async (id) => {
     router.push(`/consignment/commodity/add-commodity?id=${id}`);
   };
-  useEffect(() => {
-    fetchCommodity();
-  }, []);
+
   const headers = ["s.no", "number", "name", "edit/delete"];
   return (
     <>

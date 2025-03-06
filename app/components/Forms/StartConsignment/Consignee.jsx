@@ -49,7 +49,7 @@ export default function ConsigneeForm({
   const handleSubmit = async () => {
     if (!selectedConsignee) {
       MySwal.fire({
-        icon: "error",
+        icon: "warning",
         title: "Oops...",
         text: "Please select a consignee.",
       });
@@ -61,13 +61,13 @@ export default function ConsigneeForm({
     try {
       await UpdateConsignment(
         consignmentId,
-        { consignees: selectedConsignee },
+        { consignee: selectedConsignee },
         "Pending"
       );
 
       setFormStatuses((prev) => ({
         ...prev,
-        consignees: selectedConsignee,
+        consignee: selectedConsignee,
       }));
       setActiveAccordion(null);
 

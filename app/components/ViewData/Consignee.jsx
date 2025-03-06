@@ -2,18 +2,19 @@
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { fetchConsignees } from "@constants/consignmentAPI";
+import axiosInstance from "@utils/axiosConfig";
 const ViewConsignee = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [editLoader, setEditLoader] = useState(false);
-  const { data, error, isLoading } = useQuery({
-    queryKey: ["consignee"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["consignees"],
     queryFn: fetchConsignees,
   });
   const deleteConsignee = useMutation({
@@ -35,11 +36,9 @@ const ViewConsignee = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/consignee/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/consignee/${id}`);
+
         if (!response.ok) {
-          // throw new Error("Failed to save data");
           throw new Error(`Error: ${response.status} - ${response.statusText}`);
         }
         Swal.fire({
@@ -60,9 +59,6 @@ const ViewConsignee = () => {
     router.push(`/consignment/consignee/add-consignee?id=${id}`);
     setEditLoader(false);
   };
-  // useEffect(() => {
-  //   fetchConsignees();
-  // }, []);
   const headers = ["s.no", "name", "address", "country", "edit/delete"];
 
   return (

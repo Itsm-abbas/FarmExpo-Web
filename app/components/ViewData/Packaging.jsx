@@ -1,23 +1,18 @@
 //components/ViewData/packaging.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchPackaging } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewPackaging = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchpackaging = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/packaging`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
+  const { isLoading, data } = useQuery({
+    queryKey: ["packaging"],
+    queryFn: fetchPackaging,
+  });
 
   const handleDelete = async (id) => {
     try {
@@ -32,9 +27,7 @@ const ViewPackaging = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/packaging/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/packaging/${id}`);
         if (!response.ok) {
           console.log(id);
           throw new Error("Failed to delete packaging.");
@@ -46,7 +39,6 @@ const ViewPackaging = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchpackaging();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -57,9 +49,7 @@ const ViewPackaging = () => {
     router.push(`/consignment/packaging/add-packaging?id=${id}`);
     setEditLoader(false);
   };
-  useEffect(() => {
-    fetchpackaging();
-  }, []);
+
   const headers = ["s.no", "name", "packagingWeightPerUnit", "edit/delete"];
   return (
     <>

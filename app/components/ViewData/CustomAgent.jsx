@@ -1,24 +1,17 @@
 //components/ViewData/customagent.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchCustomAgents } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewCustomAgent = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchCustomAgent = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/customagent`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
-
+  const { data, isLoading } = useQuery({
+    queryKey: ["customagents"],
+    queryFn: fetchCustomAgents,
+  });
   const handleDelete = async (id) => {
     try {
       const result = await Swal.fire({
@@ -32,9 +25,7 @@ const ViewCustomAgent = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/customagent/${id}`, {
-          method: "DELETE",
-        });
+        const response = await fetch(`/customagent/${id}`);
         if (!response.ok) {
           throw new Error("Failed to delete customagent.");
         }
@@ -45,7 +36,6 @@ const ViewCustomAgent = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchCustomAgent();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -54,9 +44,7 @@ const ViewCustomAgent = () => {
   const handleEdit = async (id) => {
     router.push(`/consignment/custom-agent/add-customAgent?id=${id}`);
   };
-  useEffect(() => {
-    fetchCustomAgent();
-  }, []);
+
   const headers = ["s.no", "name", "station", "edit/delete"];
   return (
     <>

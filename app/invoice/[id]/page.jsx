@@ -7,6 +7,7 @@ import html2canvas from "html2canvas";
 import moment from "moment";
 import fonts from "@utils/fonts";
 import * as XLSX from "xlsx";
+import axiosInstance from "@utils/axiosConfig";
 const Invoice = () => {
   const params = useParams();
   const consignmentId = params.id;
@@ -69,10 +70,10 @@ const Invoice = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          ` ${process.env.NEXT_PUBLIC_API_URL}/consignment/${consignmentId}`
+        const response = await axiosInstance.get(
+          `/consignment/${consignmentId}`
         );
-        const data = await response.json();
+        const { data } = response;
         setConsignment(data);
       } catch (error) {
         console.error("Error fetching data:", error);

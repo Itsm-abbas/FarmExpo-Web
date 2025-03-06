@@ -7,9 +7,10 @@ import font from "@utils/fonts";
 import DataLoader from "@components/Loader/dataLoader";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-
+import Input from "@components/Input";
+import { getCookie } from "cookies-next";
 export default function ItemSelectionPage() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const { id } = useParams();
   const router = useRouter();
@@ -17,39 +18,27 @@ export default function ItemSelectionPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showQuantityInput, setShowQuantityInput] = useState(false);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [quantity, setQuantity] = useState("");
 
-  // Fetch consignment and set existing goods
-  useEffect(() => {
-    const fetchConsignmentData = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/consignment/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch consignment data.");
-        const data = await response.json();
-
-        if (data.goods && data.goods.length > 0) {
-          const existingItemIds = data.goods.map((good) => good.item.id);
-          setSelectedItems(existingItemIds);
-        }
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: error.message,
-        });
-      }
-    };
-
-    fetchConsignmentData();
-  }, [id]);
-
-  // Fetch commodities and existing consignment data
+  // Fetch commodities and consignment data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both commodities and consignment data
         const [commodityRes, consignmentRes] = await Promise.all([
-          fetch(`${apiUrl}/commodity`),
-          fetch(`${apiUrl}/consignment/${id}`),
+          fetch(`${apiUrl}/commodity`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+            },
+          }),
+          fetch(`${apiUrl}/consignment/${id}`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+            },
+          }),
         ]);
 
         if (!commodityRes.ok || !consignmentRes.ok) {
@@ -59,23 +48,15 @@ export default function ItemSelectionPage() {
         const commodityData = await commodityRes.json();
         const consignmentData = await consignmentRes.json();
 
-        // Get item IDs already in consignment
-        const existingItemIds =
-          consignmentData.goods?.map((good) => good.item.id) || [];
+        const existingItems = consignmentData.goods?.reduce((acc, good) => {
+          acc[good.item.id] = { quantity: good.quantity };
+          return acc;
+        }, {});
 
-        // Set all available commodities
         setItems(commodityData);
-
-        // Pre-select items based on consignment data
-        setSelectedItems(
-          commodityData.filter((item) => existingItemIds.includes(item.id))
-        );
+        setSelectedItems(existingItems || {});
       } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: error.message,
-        });
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
       } finally {
         setIsLoading(false);
       }
@@ -83,57 +64,74 @@ export default function ItemSelectionPage() {
 
     fetchData();
   }, [id]);
-  // Handle item selection
+
+  // Handle item selection (show quantity input)
   const handleItemSelect = (item) => {
-    setSelectedItems((prev) =>
-      prev.some((selected) => selected.id === item.id)
-        ? prev.filter((selected) => selected.id !== item.id)
-        : [...prev, item]
-    );
+    setCurrentItem(item);
+    setShowQuantityInput(true);
+  };
+
+  // Handle quantity submission
+  const handleQuantitySubmit = () => {
+    if (currentItem) {
+      const newItem = { ...currentItem, quantity: quantity || 0 }; // Default quantity 0
+      setSelectedItems((prev) => ({
+        ...prev,
+        [newItem.id]: { quantity: newItem.quantity },
+      }));
+      setShowQuantityInput(false);
+      setQuantity("");
+    }
+  };
+
+  // Skip quantity input and proceed
+  const handleSkip = () => {
+    if (currentItem) {
+      setSelectedItems((prev) => ({
+        ...prev,
+        [currentItem.id]: { quantity: 0 },
+      }));
+      setShowQuantityInput(false);
+      setQuantity("");
+    }
+  };
+
+  // Cancel selection and close input modal
+  const handleCancel = () => {
+    setShowQuantityInput(false);
+    setCurrentItem(null);
+    setQuantity("");
   };
 
   // Save selected items
   const handleSave = async () => {
     setSubmitLoading(true);
     try {
-      // Fetch the current consignment data first
-      const currentConsignmentResponse = await fetch(
-        `${apiUrl}/consignment/${id}`
-      );
-      if (!currentConsignmentResponse.ok) {
-        throw new Error("Failed to fetch current consignment data.");
-      }
-      const currentConsignment = await currentConsignmentResponse.json();
-
-      // Post each selected item to /consignmentitem and collect their IDs
       const response = await Promise.all(
-        selectedItems.map((item) =>
+        Object.entries(selectedItems).map(([itemId, { quantity }]) =>
           fetch(`${apiUrl}/consignmentitem`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+            },
             body: JSON.stringify({
-              item,
+              item: { id: parseInt(itemId) },
+              quantity: parseFloat(quantity),
             }),
           }).then((res) => res.json())
         )
       );
 
-      // Extract only IDs from response
-      const goods = response.map((item) => ({
-        id: item.id,
-      }));
+      const goods = response.map((item) => ({ id: item.id }));
 
-      // Merge new goods with existing consignment data
-      const updatedConsignment = {
-        ...currentConsignment, // Keep existing data
-        goods, // Only update goods
-      };
-
-      // Update consignment with existing data + new goods
       const consignmentResponse = await fetch(`${apiUrl}/consignment/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedConsignment), // Send the full updated data
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+        },
+        body: JSON.stringify({ goods }),
       });
 
       if (!consignmentResponse.ok) {
@@ -150,11 +148,7 @@ export default function ItemSelectionPage() {
 
       router.push(`/startconsignment/${id}`);
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: error.message,
-      });
+      Swal.fire({ icon: "error", title: "Error", text: error.message });
     } finally {
       setSubmitLoading(false);
     }
@@ -162,7 +156,7 @@ export default function ItemSelectionPage() {
 
   return (
     <motion.div
-      className={`${font.poppins.className} min-h-screen py-8  dark:bg-gray-800 text-LightPText dark:text-DarkPText`}
+      className={`${font.poppins.className} min-h-screen py-8 dark:bg-gray-800 text-LightPText dark:text-DarkPText`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -194,7 +188,7 @@ export default function ItemSelectionPage() {
                 <motion.div
                   key={item.id}
                   className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                    selectedItems.some((selected) => selected.id === item.id)
+                    selectedItems[item.id]
                       ? "border-green-600 bg-green-100 dark:bg-DarkSBg"
                       : "border-gray-300 dark:border-gray-700"
                   }`}
@@ -215,6 +209,44 @@ export default function ItemSelectionPage() {
           )}
         </div>
 
+        {/* Quantity Input Modal */}
+        {showQuantityInput && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+              <h3 className="text-lg font-semibold mb-4">
+                Enter Quantity for {currentItem?.name}
+              </h3>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="Quantity"
+              />
+
+              <div className="flex justify-between space-x-2">
+                <button
+                  onClick={handleSkip}
+                  className="bg-gray-300 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+                >
+                  Skip for Now
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="bg-red-500 text-white px-4 py-2 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleQuantitySubmit}
+                  className="bg-PrimaryButton text-white px-4 py-2 rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between capitalize">
           {!isLoading && (
             <Link
@@ -224,29 +256,12 @@ export default function ItemSelectionPage() {
               Add New Item
             </Link>
           )}
-          <div className="space-x-4">
-            <motion.button
-              onClick={() => router.push(`/startconsignment/${id}`)}
-              className="bg-gray-300 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Cancel
-            </motion.button>
-            <motion.button
-              onClick={handleSave}
-              className={`bg-PrimaryButton text-white px-4 py-2 rounded-md ${
-                submitLoading
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-PrimaryButtonHover"
-              }`}
-              disabled={submitLoading}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {submitLoading ? "Saving..." : "Save"}
-            </motion.button>
-          </div>
+          <motion.button
+            onClick={handleSave}
+            className="bg-PrimaryButton hover:bg-PrimaryButtonHover transition-all text-white px-4 sm:px-6 py-2 rounded-md"
+          >
+            {submitLoading ? "Saving..." : "Save"}
+          </motion.button>
         </div>
       </motion.div>
     </motion.div>

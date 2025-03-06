@@ -1,23 +1,18 @@
 //components/ViewData/Trader.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchTraders } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewTrader = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchTrader = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/trader`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
+  const { isLoading, data } = useQuery({
+    queryKey: ["traders"],
+    queryFn: fetchTraders,
+  });
 
   const handleDelete = async (id) => {
     try {
@@ -32,9 +27,7 @@ const ViewTrader = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/trader/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/trader/${id}`);
         if (!response.ok) {
           throw new Error(`Error: ${response.status} - ${response.statusText}`);
         }
@@ -45,7 +38,6 @@ const ViewTrader = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchTrader();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -54,9 +46,7 @@ const ViewTrader = () => {
   const handleEdit = async (id) => {
     router.push(`/consignment/trader/add-trader?id=${id}`);
   };
-  useEffect(() => {
-    fetchTrader();
-  }, []);
+
   const headers = ["s.no", "ntn", "name", "address", "country", "edit/delete"];
   return (
     <>

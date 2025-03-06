@@ -8,7 +8,10 @@ import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 export default function Packaging() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -22,8 +25,8 @@ export default function Packaging() {
       // Fetch the existing packaging data
       const fetchpackaging = async () => {
         try {
-          const response = await fetch(`${apiUrl}/packaging/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/packaging/${id}`);
+          const { data } = response;
           setName(data?.name);
           setPackagingWeightPerUnit(data?.packagingWeightPerUnit);
         } catch (error) {
@@ -55,7 +58,10 @@ export default function Packaging() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ name, packagingWeightPerUnit }),
       });
 

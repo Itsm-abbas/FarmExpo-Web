@@ -8,11 +8,14 @@ import { FaPlus } from "react-icons/fa";
 import fonts from "@utils/fonts";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next/client";
 export default function ConsignmentItemForm({ consignmentId }) {
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Extract the ID from query params
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
+  const token = getCookie("token");
   const [formData, setFormData] = useState({
     item: null,
     packaging: null,
@@ -55,8 +58,8 @@ export default function ConsignmentItemForm({ consignmentId }) {
       // Fetch the existing consingee data
       const fetchConsignmentItem = async () => {
         try {
-          const response = await fetch(`${apiUrl}/consignmentitem/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/consignmentitem/${id}`);
+          const { data } = response;
           setFormData(data);
         } catch (error) {
           Swal.fire({
@@ -74,8 +77,19 @@ export default function ConsignmentItemForm({ consignmentId }) {
     const fetchData = async () => {
       try {
         const [itemsResponse, packagingResponse] = await Promise.all([
-          fetch(`${apiUrl}/commodity`),
-          fetch(`${apiUrl}/packaging`),
+          fetch(`${apiUrl}/commodity`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+
+          fetch(`${apiUrl}/packaging`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ]);
 
         const itemsData = await itemsResponse.json();
@@ -134,7 +148,10 @@ export default function ConsignmentItemForm({ consignmentId }) {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 

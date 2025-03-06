@@ -1,23 +1,18 @@
 //components/ViewData/iataagent.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchIata } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewIataAgent = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchIataAgent = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/iataagent`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
+  const { isLoading, data } = useQuery({
+    queryKey: ["iataagents"],
+    queryFn: fetchIata,
+  });
 
   const handleDelete = async (id) => {
     try {
@@ -32,9 +27,7 @@ const ViewIataAgent = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/iataagent/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/iataagent/${id}`);
         if (!response.ok) {
           throw new Error("Failed to delete iataagent.");
         }
@@ -45,7 +38,6 @@ const ViewIataAgent = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchIataAgent();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -54,9 +46,7 @@ const ViewIataAgent = () => {
   const handleEdit = async (id) => {
     router.push(`/consignment/iata-agent/add-iataAgent?id=${id}`);
   };
-  useEffect(() => {
-    fetchIataAgent();
-  }, []);
+
   const headers = ["s.no", "name", "station", "edit/delete"];
   return (
     <>

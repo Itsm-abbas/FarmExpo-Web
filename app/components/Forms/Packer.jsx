@@ -8,7 +8,10 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 export default function Packer() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -22,8 +25,8 @@ export default function Packer() {
       // Fetch the existing packer data
       const fetchpacker = async () => {
         try {
-          const response = await fetch(`${apiUrl}/packer/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/packer/${id}`);
+          const { data } = response;
           setName(data?.name);
           setStation(data?.station);
         } catch (error) {
@@ -55,7 +58,10 @@ export default function Packer() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ name, station }),
       });
       if (!response.ok) {

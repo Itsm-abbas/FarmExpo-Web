@@ -6,12 +6,14 @@ import Swal from "sweetalert2";
 import Input from "@components/Input";
 import SaveButton from "@components/Button/SaveButton";
 import { useQuery } from "@tanstack/react-query";
+import { getCookie } from "cookies-next";
 import {
   fetchFinancialInstrument,
   fetchGoodsDeclaration,
 } from "@constants/consignmentAPI";
 
 export default function FinancialInstrumentUtilizedForm() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [selectedFi, setSelectedFi] = useState("");
   const [selectedGd, setSelectedGd] = useState("");
@@ -46,7 +48,10 @@ export default function FinancialInstrumentUtilizedForm() {
     try {
       const response = await fetch(`${apiUrl}/fiu`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
 

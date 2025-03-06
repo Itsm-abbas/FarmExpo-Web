@@ -8,8 +8,10 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
-
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 export default function CustomAgent() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -23,8 +25,8 @@ export default function CustomAgent() {
       // Fetch the existing customagent data
       const fetchCustomAgents = async () => {
         try {
-          const response = await fetch(`${apiUrl}/customagent/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/customagent/${id}`);
+          const { data } = response;
           setName(data?.name);
           setStation(data?.station);
         } catch (error) {
@@ -56,7 +58,10 @@ export default function CustomAgent() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ name, station }),
       });
 
@@ -72,7 +77,7 @@ export default function CustomAgent() {
           : "custom agent added successfully.",
       });
       if (result.isConfirmed) {
-        router.push("view-customagent");
+        router.push("view-customAgent");
       }
 
       if (!id) {

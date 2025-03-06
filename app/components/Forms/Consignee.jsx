@@ -8,8 +8,11 @@ import Input from "@components/Input";
 import { useSearchParams, useRouter } from "next/navigation";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 export default function ConsigneeForm() {
+  const token = getCookie("token");
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id"); // Extract the ID from query params
@@ -27,8 +30,8 @@ export default function ConsigneeForm() {
       // Fetch the existing consingee data
       const fetchConsignee = async () => {
         try {
-          const response = await fetch(`${apiUrl}/consignee/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/consignee/${id}`);
+          const { data } = response;
           setFormData(data);
         } catch (error) {
           Swal.fire({
@@ -56,10 +59,17 @@ export default function ConsigneeForm() {
     try {
       const method = id ? "PUT" : "POST";
       const url = id ? `${apiUrl}/consignee/${id}` : `${apiUrl}/consignee`;
-
+      // const response = await axiosInstance({
+      //   method, // Use the dynamic method
+      //   url, // Use the dynamic URL
+      //   data: formData, // Pass the form data
+      // });
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
 

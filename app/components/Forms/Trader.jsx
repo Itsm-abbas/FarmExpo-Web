@@ -9,8 +9,11 @@ import SaveButton from "@components/Button/SaveButton";
 import Input from "@components/Input";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
+import { getCookie } from "cookies-next";
+import axiosInstance from "@utils/axiosConfig";
 
 export default function TraderForm() {
+  const token = getCookie("token");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -28,8 +31,8 @@ export default function TraderForm() {
       // Fetch the existing Trader data
       const fetchTrader = async () => {
         try {
-          const response = await fetch(`${apiUrl}/trader/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/trader/${id}`);
+          const { data } = response;
           setFormData(data);
         } catch (error) {
           Swal.fire({
@@ -65,7 +68,10 @@ export default function TraderForm() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(formData),
       });
 

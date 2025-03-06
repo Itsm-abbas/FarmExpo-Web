@@ -1,23 +1,19 @@
 //components/ViewData/ConsignmentItem.jsx
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
+import { fetchConsignmentItem } from "@constants/consignmentAPI";
+import { useQuery } from "@tanstack/react-query";
+import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewConsignmentItem = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editLoader, setEditLoader] = useState(false);
-  const fetchConsignmentItem = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${apiUrl}/consignmentitem`);
-    const result = await response.json();
-    setData(result);
-    setIsLoading(false);
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ["consignmentitem"],
+    queryFn: fetchConsignmentItem,
+  });
 
   const handleDelete = async (id) => {
     try {
@@ -32,12 +28,8 @@ const ViewConsignmentItem = () => {
       });
 
       if (result.isConfirmed) {
-        const response = await fetch(`${apiUrl}/consignmentitem/${id}`, {
-          method: "DELETE",
-        });
+        const response = await axiosInstance.delete(`/consignmentitem/${id}`);
         if (!response.ok) {
-          console.log("id: " + id);
-          console.log(response);
           throw new Error("Failed to delete consignmentitem.");
         }
         Swal.fire({
@@ -47,7 +39,6 @@ const ViewConsignmentItem = () => {
           showConfirmButton: false,
           timer: 1500,
         });
-        await fetchConsignmentItem();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
@@ -56,9 +47,6 @@ const ViewConsignmentItem = () => {
   const handleEdit = async (id) => {
     router.push(`/consignment/consignmentitem/add-consignmentitem?id=${id}`);
   };
-  useEffect(() => {
-    fetchConsignmentItem();
-  }, []);
   const headers = [
     { label: "ID", accessor: "id" },
     { label: "Item Name", accessor: "item.name" },

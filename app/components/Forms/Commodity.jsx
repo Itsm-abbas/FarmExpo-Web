@@ -9,8 +9,10 @@ import Input from "@components/Input";
 import LinkButton from "@components/Button/LinkButton";
 import { FaEye } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-
+import axiosInstance from "@utils/axiosConfig";
+import { getCookie } from "cookies-next";
 export default function CommodityForm() {
+  const token = getCookie("token");
   const router = useRouter();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const searchParams = useSearchParams();
@@ -23,8 +25,8 @@ export default function CommodityForm() {
       // Fetch the existing commodity data
       const fetchCommodity = async () => {
         try {
-          const response = await fetch(`${apiUrl}/commodity/${id}`);
-          const data = await response.json();
+          const response = await axiosInstance.get(`/commodity/${id}`);
+          const { data } = response;
           setFormData(data);
         } catch (error) {
           Swal.fire({
@@ -55,7 +57,10 @@ export default function CommodityForm() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+        },
         body: JSON.stringify(formData),
       });
 
