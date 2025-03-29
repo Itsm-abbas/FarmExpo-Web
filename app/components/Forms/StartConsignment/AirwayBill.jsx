@@ -200,15 +200,15 @@ export default function AirwayBill({
         animate={{ scale: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <h2 className="text-xl font-semibold mb-8">Airway Bill</h2>
+        <h2 className="text-xl font-semibold mb-8">Airway/Seaway Bill</h2>
         {/* Number */}
         <Input
           id="Billnumber"
-          type="number"
+          type="text"
           value={Billnumber}
           onChange={(e) => setBillNumber(e.target.value)}
-          placeholder="Enter Airway Bill Number"
-          label="Airway Bill Number*"
+          placeholder="Enter Airway/Seaway Bill Number"
+          label="Airway/Seaway Bill Number*"
         />
 
         {/* IATA Agent Dropdown */}
@@ -280,8 +280,8 @@ export default function AirwayBill({
           type="number"
           value={airwayBillWeight}
           onChange={(e) => setAirwayBillWeight(e.target.value)}
-          placeholder="Enter Airway Bill Weight"
-          label="Airway Bill Weight*"
+          placeholder="Enter Airway/Seaway Bill Weight"
+          label="Airway/Seaway Bill Weight*"
         />
         {/* Fee */}
         <Input

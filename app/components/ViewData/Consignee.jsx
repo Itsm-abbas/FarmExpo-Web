@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { fetchConsignees } from "@constants/consignmentAPI";
 import axiosInstance from "@utils/axiosConfig";
 const ViewConsignee = () => {
+  const queryClient = useQueryClient();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const router = useRouter();
   const [editLoader, setEditLoader] = useState(false);
@@ -38,17 +39,19 @@ const ViewConsignee = () => {
       if (result.isConfirmed) {
         const response = await axiosInstance.delete(`/consignee/${id}`);
 
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} - ${response.statusText}`);
+        if (response.status === 204) {
+          Swal.fire({
+            position: "top-center",
+            icon: "success",
+            title: "Deleted Successfully",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+
+          queryClient.invalidateQueries(["consignees"]);
+        } else {
+          throw new Error("Unexpected response status: " + response.status);
         }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted Successfully",
-          showConfirmButton: false,
-          timer: 1500,
-        });
-        await fetchConsignees();
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");

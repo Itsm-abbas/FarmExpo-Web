@@ -10,7 +10,7 @@ import { fetchPackaging } from "@constants/consignmentAPI";
 import { getCookie } from "cookies-next";
 const MySwal = withReactContent(Swal);
 
-export default function PackagingForm() {
+export default function PackagingForm({ consignmentId, setFormStatuses }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const token = getCookie("token");
   const router = useRouter();

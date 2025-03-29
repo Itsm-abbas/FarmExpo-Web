@@ -9,15 +9,11 @@ import ThemeToggle from "../ThemeToggle";
 import Sidebar from "../Siderbar";
 import { motion, AnimatePresence } from "framer-motion";
 import { deleteCookie } from "cookies-next";
-import { useRouter } from "next/navigation";
-import { fetchUser } from "@constants/consignmentAPI";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Header() {
-  const { data } = useQuery({
-    queryKey: ["user"],
-    queryFn: fetchUser,
-  });
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -47,7 +43,7 @@ export default function Header() {
   const LogoutUser = () => {
     setIsDropdownOpen(false);
     deleteCookie("token");
-    queryClient.removeQueries(["user"]);
+    // queryClient.removeQueries(["user"]);
     queryClient.clear(); // Extra cache clearing for safety
     router.replace("/auth/login");
   };
@@ -98,7 +94,10 @@ export default function Header() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <p className="truncate">{data?.fullName.trim().split(" ")[0]}</p>
+            <p className="truncate">
+              Profile
+              {/* {data?.fullName.trim().split(" ")[0]} */}
+            </p>
           </motion.button>
 
           {/* Profile Dropdown */}

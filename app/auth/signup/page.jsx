@@ -1,8 +1,7 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import { useRouter } from "next/navigation";
+import { useRouter, redirect } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import fonts from "@utils/fonts";
@@ -74,6 +73,9 @@ export default function Register() {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    redirect("/auth/login");
+  }, []);
 
   return (
     <motion.div

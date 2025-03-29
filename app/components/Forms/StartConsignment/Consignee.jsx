@@ -59,11 +59,17 @@ export default function ConsigneeForm({
     setIsSubmitting(true);
 
     try {
-      await UpdateConsignment(
-        consignmentId,
-        { consignee: selectedConsignee },
-        "Pending"
-      );
+      if (existingData) {
+        await UpdateConsignment(consignmentId, {
+          consignee: selectedConsignee,
+        });
+      } else {
+        await UpdateConsignment(
+          consignmentId,
+          { consignee: selectedConsignee },
+          "Pending"
+        );
+      }
 
       setFormStatuses((prev) => ({
         ...prev,

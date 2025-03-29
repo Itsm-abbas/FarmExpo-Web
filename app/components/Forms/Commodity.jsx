@@ -101,7 +101,7 @@ export default function CommodityForm() {
         </h2>
         <Input
           id={"number"}
-          type="number"
+          type="text"
           label="Number"
           placeholder="Enter number"
           value={formData.number}

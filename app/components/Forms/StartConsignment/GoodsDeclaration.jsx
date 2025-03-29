@@ -164,7 +164,7 @@ export default function GoodsDeclarationForm({
           >
             <Input
               id={"number"}
-              type="number"
+              type="string"
               label="Number"
               value={formData.number}
               onChange={(e) =>
@@ -193,7 +193,7 @@ export default function GoodsDeclarationForm({
             />
             <Input
               id={"cin"}
-              type="number"
+              type="text"
               label="Commercial Invoice Number"
               value={formData.commercialInvoiceNumber}
               onChange={(e) =>

@@ -32,6 +32,8 @@ export default {
         PrimaryButtonHover: "#059669",
         SecondaryButton: "#3B82F6",
         SecondaryButtonHover: "#2563EB",
+        CancelButton: "#dc2626",
+        CancelButtonHover: "#ef4444",
         // primaryColor: "rgb(22 163 74)",
         // hover1: "#15803d",
         // secondaryColor: "rgb(37 99 235)",

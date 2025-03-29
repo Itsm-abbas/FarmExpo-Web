@@ -2,12 +2,13 @@
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { fetchPackaging } from "@constants/consignmentAPI";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewPackaging = () => {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { isLoading, data } = useQuery({
     queryKey: ["packaging"],
@@ -28,26 +29,26 @@ const ViewPackaging = () => {
 
       if (result.isConfirmed) {
         const response = await axiosInstance.delete(`/packaging/${id}`);
-        if (!response.ok) {
-          console.log(id);
-          throw new Error("Failed to delete packaging.");
+        if (response.status === 204) {
+          Swal.fire({
+            position: "top-center",
+            icon: "success",
+            title: "Deleted Successfully",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+
+          queryClient.invalidateQueries(["packaging"]);
+        } else {
+          throw new Error("Unexpected response status: " + response.status);
         }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted Successfully",
-          showConfirmButton: false,
-          timer: 1500,
-        });
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");
     }
   };
   const handleEdit = async (id) => {
-    setEditLoader(true);
     router.push(`/consignment/packaging/add-packaging?id=${id}`);
-    setEditLoader(false);
   };
 
   const headers = ["s.no", "name", "packagingWeightPerUnit", "edit/delete"];

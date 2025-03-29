@@ -6,75 +6,104 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import moment from "moment";
 import fonts from "@utils/fonts";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
 import axiosInstance from "@utils/axiosConfig";
+import XLSX from "xlsx-js-style";
+
 const Invoice = () => {
   const params = useParams();
-  const consignmentId = params.id;
+  const consignmentId = params?.id;
   const [consignment, setConsignment] = useState(null);
+  const [fiuData, setFiuData] = useState([]);
   const [loading, setLoading] = useState(true);
-  // To excel
-  const exportToExcel = () => {
-    if (!consignment) return;
+  const [netWeight, setNetWeight] = useState("");
+  const [grossWeight, setGrossWeight] = useState("");
+  const [tareWeight, setTareWeight] = useState("");
+  const [totalAirwayBill, setTotalAirwayBill] = useState("");
+  const [totalPackingAmount, setTotalPackingAmount] = useState("");
+  const [totalGoodsAmount, setTotalGoodAmount] = useState("");
+  const [totalRecovery, setTotalRecovery] = useState("");
+  const [totalPackagingCost, setTotalPackagingCost] = useState("");
+  const [customFee, setCustomFee] = useState("");
+  const [dailyExpenses, setDailyExpenses] = useState("");
+  const [CFR, setCFR] = useState("");
+  useEffect(() => {
+    let totalNetWeight = 0;
+    let totalTareWeight = 0;
 
-    const invoiceData = [
-      ["Consignment ID", consignment.id],
-      ["Date", new Date(consignment.date).toLocaleDateString()],
-      [],
-      ["Trader Details"],
-      ["Name", consignment.trader.name],
-      ["Address", consignment.trader.address],
-      ["Country", consignment.trader.country],
-      ["NTN", consignment.trader.ntn],
-      [],
-      ["Consignee Details"],
-      ["Name", consignment.consignee.name],
-      ["Address", consignment.consignee.address],
-      ["Country", consignment.consignee.country],
-      [],
-      ["Goods"],
-      [
-        "Item",
-        "Quantity",
-        "Weight (kg)",
-        "Packaging",
-        "Commodity Cost",
-        "Packaging Cost",
-        "Damage",
-        "Total",
-      ],
-      ...consignment.goods.map((good) => [
-        good.item.name,
-        good.quantity,
-        good.weightPerUnit,
-        good.packaging.name,
-        good.commodityPerUnitCost,
-        good.packagingPerUnitCost,
-        good.damage,
-        (
-          good.commodityPerUnitCost * good.quantity +
-          good.packagingPerUnitCost * good.quantity
-        ).toFixed(2),
-      ]),
-      [],
-      ["Total Weight", consignment.localInvoiceWeight + " kg"],
-    ];
+    consignment?.goods?.forEach((good) => {
+      const ctntWeight =
+        (good.quantity || 0) * (good.packaging?.packagingWeightPerUnit || 0);
+      const totalWeight = (good.weightPerUnit || 0) * (good.quantity || 0);
 
-    const worksheet = XLSX.utils.aoa_to_sheet(invoiceData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+      totalNetWeight += totalWeight;
+      totalTareWeight += ctntWeight;
+    });
 
-    XLSX.writeFile(workbook, `invoice_consignment_${consignment.id}.xlsx`);
-  };
-  // Fetch consignment data
+    setNetWeight(totalNetWeight);
+    setTareWeight(totalTareWeight);
+    setGrossWeight(totalNetWeight + totalTareWeight);
+    //CFR
+    const totalcfr =
+      consignment?.goodsDeclaration.fob +
+      consignment?.goodsDeclaration.gdFreight;
+    setCFR(totalcfr);
+    // Total AirwayBill
+    const totalA =
+      consignment?.airwayBill.rate * consignment?.airwayBill.airwayBillWeight +
+      consignment?.airwayBill.fee;
+    setTotalAirwayBill(totalA);
+    // Total Packing Rate
+    const totalPackging =
+      consignment?.airwayBill.airwayBillWeight *
+      consignment?.packing?.ratePerKg;
+    setTotalPackingAmount(totalPackging);
+
+    // Goods
+    const totalG = consignment?.goods.reduce((acc, good) => {
+      const totalWeight = (good.weightPerUnit || 0) * (good.quantity || 0);
+      const totalAmount = totalWeight * (good.commodityPerUnitCost || 0);
+      return acc + totalAmount;
+    }, 0);
+
+    setTotalGoodAmount(parseInt(totalG));
+    // Daily Expenses
+    setDailyExpenses(consignment?.dailyExpenses);
+    // Total Recovery
+    const totalRecovery =
+      consignment?.recoveryDone?.amount *
+      consignment?.recoveryDone?.exchangeRate;
+    setTotalRecovery(totalRecovery);
+    // Total Packaging Cost
+    const totalPackaging = consignment?.goods.reduce((acc, good) => {
+      const totalAmount = good.quantity * good.packagingPerUnitCost;
+      return acc + totalAmount;
+    }, 0);
+    setTotalPackagingCost(totalPackaging);
+    // Custom Fee
+    setCustomFee(consignment?.customClearance.fee);
+  }, [consignment]); // Runs only when `consignment` changes
+
+  // Fetch consignment and FIU data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axiosInstance.get(
-          `/consignment/${consignmentId}`
-        );
-        const { data } = response;
-        setConsignment(data);
+        const [consignmentRes, fiuRes] = await Promise.all([
+          axiosInstance.get(`/consignment/${consignmentId}`),
+          axiosInstance.get("/fiu"),
+        ]);
+
+        setConsignment(consignmentRes.data);
+
+        // Filter FIU data for this consignment's goods declaration
+        if (consignmentRes.data?.goodsDeclaration?.id) {
+          const filteredFiu = fiuRes.data.filter(
+            (fiu) =>
+              fiu.goodsDeclaration?.id ===
+              consignmentRes.data.goodsDeclaration.id
+          );
+          setFiuData(filteredFiu);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -84,25 +113,623 @@ const Invoice = () => {
     fetchData();
   }, [consignmentId]);
 
-  // Generate PDF
-  const generatePDF = async () => {
-    const element = document.getElementById("invoice");
-    if (!element) return;
+  // Calculate totals
+  const calculateTotals = () => {
+    if (!consignment?.goods) return { totalWeight: 0, totalAmount: 0 };
 
-    const canvas = await html2canvas(element, { scale: 2 });
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgWidth = 190;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(
-      canvas.toDataURL("image/png"),
-      "PNG",
-      10,
-      10,
-      imgWidth,
-      imgHeight
+    return consignment.goods.reduce(
+      (acc, good) => {
+        const weight = (good.weightPerUnit || 0) * (good.quantity || 0);
+        const amount = weight * (good.commodityPerUnitCost || 0);
+        return {
+          totalWeight: acc.totalWeight + weight,
+          totalAmount: acc.totalAmount + amount,
+        };
+      },
+      { totalWeight: 0, totalAmount: 0 }
     );
-    pdf.save(`invoice_consignment_${consignmentId}.pdf`);
+  };
+
+  const { totalWeight, totalAmount } = calculateTotals();
+
+  // To excel
+  const exportToExcel = () => {
+    if (!consignment) return;
+
+    // Style definitions with your color scheme
+    const primaryColor = "10B981"; // Emerald
+    const secondaryColor = "3B82F6"; // Blue
+
+    const titleStyle = {
+      font: { bold: true, size: 16, color: { rgb: primaryColor } },
+      alignment: { horizontal: "center" },
+    };
+
+    const sectionHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: primaryColor } },
+      alignment: { horizontal: "center" },
+    };
+
+    const tableHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: secondaryColor } },
+      alignment: { horizontal: "center" },
+    };
+
+    const tableCellStyle = {
+      border: {
+        top: { style: "thin", color: { rgb: "D3D3D3" } },
+        bottom: { style: "thin", color: { rgb: "D3D3D3" } },
+        left: { style: "thin", color: { rgb: "D3D3D3" } },
+        right: { style: "thin", color: { rgb: "D3D3D3" } },
+      },
+    };
+
+    const totalRowStyle = {
+      font: { bold: true },
+      fill: { fgColor: { rgb: "F2F2F2" } },
+      border: {
+        top: { style: "medium", color: { rgb: "000000" } },
+        bottom: { style: "medium", color: { rgb: "000000" } },
+      },
+    };
+
+    // Create worksheet data
+    const invoiceData = [
+      // Title row (merged)
+      [{ v: "FarmExpo - Invoice", t: "s", s: titleStyle }],
+
+      // Header info
+      [
+        { v: "Consignment ID", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.id, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Date", t: "s", s: { font: { bold: true } } },
+        { v: new Date(consignment?.date).toLocaleDateString(), t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [""], // Spacer
+
+      // Trader & Consignee section - FIXED HEADERS
+      [
+        { v: "Trader Details", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        { v: "Consignee Details", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Name:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.trader?.name, t: "s" },
+        "",
+        "",
+        { v: "Name:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.consignee?.name, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Address:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.trader?.address, t: "s" },
+        "",
+        "",
+        { v: "Address:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.consignee?.address, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Country:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.trader?.country, t: "s" },
+        "",
+        "",
+        { v: "Country:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.consignee?.country, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "NTN:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.trader?.ntn, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [""], // Spacer
+
+      // Airway Bill & Goods Declaration (matches website headers)
+      [
+        { v: "Airway Bill", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        { v: "Goods Declaration", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Number:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.airwayBill?.number, t: "s" },
+        "",
+        "",
+        { v: "Number:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.goodsDeclaration?.number, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Agent:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.airwayBill?.iataAgent?.name || "", t: "s" }, // FIXED: Added fallback
+        "",
+        "",
+        { v: "Date:", t: "s", s: { font: { bold: true } } },
+        {
+          v: consignment?.goodsDeclaration?.date
+            ? new Date(consignment.goodsDeclaration.date).toLocaleDateString()
+            : "",
+          t: "s",
+        }, // FIXED: Added date formatting
+        "",
+        "",
+      ],
+      [
+        { v: "Station:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.airwayBill?.iataAgent?.station, t: "s" },
+        "",
+        "",
+        { v: "Exchange Rate:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.goodsDeclaration?.exchangeRate, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Date:", t: "s", s: { font: { bold: true } } },
+        {
+          v: new Date(consignment?.airwayBill?.dateTime)?.toLocaleString(),
+          t: "s",
+        },
+        "",
+        "",
+        { v: "Invoice No:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.goodsDeclaration?.commercialInvoiceNumber, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Rate:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.airwayBill?.rate, t: "s" },
+        "",
+        "",
+        { v: "FOB:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.goodsDeclaration?.fob, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Weight:", t: "s", s: { font: { bold: true } } },
+        { v: `${consignment?.airwayBill?.airwayBillWeight} kg`, t: "s" },
+        "",
+        "",
+        { v: "GD Freight:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.goodsDeclaration?.gdFreight, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Fee:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.airwayBill?.fee, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [""], // Spacer
+
+      // Financial Instrument Utilization section
+      ...(fiuData.length > 0
+        ? [
+            [
+              {
+                v: "Financial Instrument Utilization",
+                t: "s",
+                s: sectionHeaderStyle,
+              },
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+            ],
+            [
+              { v: "Instrument", t: "s", s: tableHeaderStyle },
+              { v: "Utilized", t: "s", s: tableHeaderStyle },
+              { v: "Balance", t: "s", s: tableHeaderStyle },
+              "",
+              "",
+              "",
+              "",
+              "",
+            ],
+            ...fiuData.map((fiu) => [
+              { v: fiu.financialInstrument?.number, t: "s", s: tableCellStyle },
+              {
+                v: fiu.utilized + " " + fiu.financialInstrument?.currency,
+                t: "n",
+                s: tableCellStyle,
+              },
+              {
+                v:
+                  fiu.financialInstrument?.balance +
+                  " " +
+                  fiu.financialInstrument?.currency,
+                t: "n",
+                s: tableCellStyle,
+              },
+              "",
+              "",
+              "",
+              "",
+              "",
+            ]),
+            [""], // Spacer
+          ]
+        : []),
+      // Goods Table (matches website headers exactly)
+      [
+        { v: "Goods", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Item", t: "s", s: tableHeaderStyle },
+        { v: "Qty", t: "s", s: tableHeaderStyle },
+        { v: "Per Unit", t: "s", s: tableHeaderStyle },
+        { v: "ctn Weight", t: "s", s: tableHeaderStyle },
+        { v: "ctn tWeight", t: "s", s: tableHeaderStyle },
+        { v: "Rate per Unit", t: "s", s: tableHeaderStyle },
+        { v: "tWeight", t: "s", s: tableHeaderStyle },
+        { v: "Total Amount", t: "s", s: tableHeaderStyle },
+      ],
+      ...consignment?.goods?.map((good) => {
+        const ctntWeight =
+          (good.quantity || 0) * (good.packaging?.packagingWeightPerUnit || 0);
+        const totalWeight = (good.weightPerUnit || 0) * (good.quantity || 0);
+        const totalAmount = totalWeight * (good.commodityPerUnitCost || 0);
+
+        return [
+          { v: good?.item?.name, t: "s", s: tableCellStyle },
+          { v: good?.quantity, t: "n", s: tableCellStyle },
+          {
+            v: `${good?.weightPerUnit?.toFixed(1)} kg`,
+            t: "s",
+            s: tableCellStyle,
+          },
+          {
+            v: `${good?.packaging?.packagingWeightPerUnit || 0} kg`,
+            t: "s",
+            s: tableCellStyle,
+          },
+          { v: `${ctntWeight} kg`, t: "s", s: tableCellStyle },
+          { v: good?.commodityPerUnitCost, t: "n", s: tableCellStyle },
+          { v: `${totalWeight} kg`, t: "s", s: tableCellStyle },
+          { v: totalAmount.toFixed(2), t: "n", s: tableCellStyle },
+        ];
+      }),
+      [
+        { v: "TOTAL", t: "s", s: totalRowStyle },
+        { v: "", t: "s", s: totalRowStyle },
+        { v: "", t: "s", s: totalRowStyle },
+        { v: "", t: "s", s: totalRowStyle },
+        { v: "", t: "s", s: totalRowStyle },
+        { v: "", t: "s", s: totalRowStyle },
+        { v: `${totalWeight.toFixed(2)} kg`, t: "s", s: totalRowStyle },
+        { v: totalAmount.toFixed(2), t: "n", s: totalRowStyle },
+      ],
+      [""], // Spacer
+
+      // Totals & Recovery (matches website)
+      [
+        { v: "Totals", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        { v: "Recovery", t: "s", s: sectionHeaderStyle },
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Net Weight:", t: "s", s: { font: { bold: true } } },
+        { v: `${netWeight} kg`, t: "s" },
+        "",
+        "",
+        { v: "Currency:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.recoveryDone?.currency, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Tare Weight:", t: "s", s: { font: { bold: true } } },
+        { v: `${tareWeight} kg`, t: "s" },
+        "",
+        "",
+        { v: "Exchange Rate:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.recoveryDone?.exchangeRate, t: "s" },
+        "",
+        "",
+      ],
+      [
+        { v: "Gross Weight:", t: "s", s: { font: { bold: true } } },
+        { v: `${grossWeight} kg`, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Daily Expenses:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.dailyExpenses, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        { v: "Status:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.status, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [""], // Spacer
+
+      // Footer (matches website)
+      [
+        { v: "Generated on:", t: "s", s: { font: { italic: true } } },
+        { v: moment().format("MMMM Do YYYY, h:mm:ss a"), t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+    ];
+
+    // Filter out empty rows from conditional sections
+    const filteredInvoiceData = invoiceData.filter((row) => row.length > 0);
+
+    // Create worksheet
+    // Create worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(invoiceData);
+
+    // Set column widths
+    worksheet["!cols"] = [
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+
+    // Merge cells (only for title and section headers)
+    worksheet["!merges"] = [
+      // Title
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+      // Section headers
+      // { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } }, // Trader
+      // { s: { r: 4, c: 4 }, e: { r: 4, c: 7 } }, // Consignee
+      { s: { r: 12, c: 0 }, e: { r: 12, c: 3 } }, // Airway
+      { s: { r: 12, c: 4 }, e: { r: 12, c: 7 } }, // Goods Decl
+      {
+        s: { r: 20 + (fiuData.length > 0 ? 2 + fiuData.length : 0), c: 0 },
+        e: { r: 20 + (fiuData.length > 0 ? 2 + fiuData.length : 0), c: 7 },
+      }, // Goods
+      {
+        s: {
+          r:
+            23 +
+            (fiuData.length > 0 ? 2 + fiuData.length : 0) +
+            consignment?.goods?.length,
+          c: 0,
+        },
+        e: {
+          r:
+            23 +
+            (fiuData.length > 0 ? 2 + fiuData.length : 0) +
+            consignment?.goods?.length,
+          c: 3,
+        },
+      }, // Totals
+      {
+        s: {
+          r:
+            23 +
+            (fiuData.length > 0 ? 2 + fiuData.length : 0) +
+            consignment?.goods?.length,
+          c: 4,
+        },
+        e: {
+          r:
+            23 +
+            (fiuData.length > 0 ? 2 + fiuData.length : 0) +
+            consignment?.goods?.length,
+          c: 7,
+        },
+      }, // Recovery
+    ];
+
+    // Create workbook and save
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+    XLSX.writeFile(workbook, `FarmExpo_Invoice_${consignment?.id}.xlsx`, {
+      compression: true,
+      bookType: "xlsx",
+    });
+  };
+
+  const generatePDF = async () => {
+    let loadingIndicator = null;
+
+    try {
+      const element = document.getElementById("invoice");
+      if (!element) {
+        console.error("Invoice element not found");
+        return;
+      }
+
+      // Create a cool loading indicator with animation
+      loadingIndicator = document.createElement("div");
+      loadingIndicator.style.position = "fixed";
+      loadingIndicator.style.top = "0";
+      loadingIndicator.style.left = "0";
+      loadingIndicator.style.width = "100%";
+      loadingIndicator.style.height = "100%";
+      loadingIndicator.style.backgroundColor = "rgba(0,0,0,0.7)";
+      loadingIndicator.style.display = "flex";
+      loadingIndicator.style.flexDirection = "column";
+      loadingIndicator.style.justifyContent = "center";
+      loadingIndicator.style.alignItems = "center";
+      loadingIndicator.style.zIndex = "9999";
+      loadingIndicator.innerHTML = `
+        <div style="
+          width: 80px;
+          height: 80px;
+          border: 8px solid #f3f3f3;
+          border-top: 8px solid ${
+            consignment?.status === "Fulfilled" ? "#10B981" : "#3B82F6"
+          };
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 20px;
+        "></div>
+        <div style="color: white; font-size: 1.5rem; font-family: Arial;">
+          Generating Invoice...
+          <div style="font-size: 0.8rem; margin-top: 10px;">Please wait while we prepare your document</div>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      `;
+      document.body.appendChild(loadingIndicator);
+
+      // Wait briefly to ensure loading indicator is visible
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10; // mm margin on each side
+      const imgWidth = pageWidth - margin * 2;
+
+      // First capture the entire element to calculate total height
+      const fullCanvas = await html2canvas(element, {
+        scale: 1,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowHeight: element.scrollHeight,
+      });
+
+      const totalHeight = fullCanvas.height;
+      const viewportHeight = Math.floor(
+        (pageHeight - margin * 2) * (fullCanvas.width / imgWidth)
+      );
+      const totalPages = Math.ceil(totalHeight / viewportHeight);
+
+      // Render each page
+      for (let i = 0; i < totalPages; i++) {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          windowHeight: viewportHeight,
+          scrollY: i * viewportHeight,
+          scrollX: 0,
+          x: 0,
+          y: i * viewportHeight,
+          width: element.offsetWidth,
+          height: viewportHeight,
+        });
+
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          margin,
+          margin,
+          imgWidth,
+          imgHeight
+        );
+      }
+
+      pdf.save(
+        `FarmExpo_Invoice_${consignmentId}_${
+          new Date().toISOString().split("T")[0]
+        }.pdf`
+      );
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      if (loadingIndicator && document.body.contains(loadingIndicator)) {
+        loadingIndicator.style.transition = "opacity 0.3s ease";
+        loadingIndicator.style.opacity = "0";
+        setTimeout(() => {
+          document.body.removeChild(loadingIndicator);
+        }, 300);
+      }
+    }
   };
 
   // Trigger print dialog
@@ -137,259 +764,496 @@ const Invoice = () => {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`p-4 bg-gray-100 dark:bg-gray-900 min-h-screen  ${fonts.openSans.className}`}
+      className={`p-4 bg-gray-100 dark:bg-gray-900 min-h-screen ${fonts.openSans.className}`}
     >
       <div
         id="invoice"
-        className="print-area bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 max-w-4xl mx-auto text-sm"
+        className="print-area bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 max-w-4xl mx-auto text-sm"
       >
         {/* Header */}
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <div className="text-center mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
+          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
             FarmExpo - Invoice
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            Consignment ID: {consignment.id}
-          </p>
-          <p className="text-gray-500 dark:text-gray-400">
-            Date: {new Date(consignment.date).toLocaleDateString()}
-          </p>
+          <div className="flex justify-center gap-4 text-gray-600 dark:text-gray-300">
+            <p>
+              <span className="font-semibold">Consignment ID:</span>
+              {consignment?.id}
+            </p>
+            <p>
+              <span className="font-semibold">Date:</span>
+              {new Date(consignment?.date).toLocaleDateString()}
+            </p>
+          </div>
         </div>
-
         {/* Trader & Consignee Table */}
-        <table className="w-full mb-4">
+        <table className="table w-full mb-6 border border-gray-200 dark:border-gray-700">
           <thead>
-            <tr className="bg-gray-200 dark:bg-gray-700">
-              <th className="p-2 text-left">Trader Details</th>
-              <th className="p-2 text-left">Consignee Details</th>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="p-3 text-left border-b w-1/2 border-gray-200 dark:border-gray-700">
+                Trader Details
+              </th>
+              <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                Consignee Details
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="p-2 border-r border-gray-200 dark:border-gray-700">
-                <p>
-                  <strong>Name:</strong> {consignment.trader.name}
+              <td className="p-3 border-r border-gray-200 dark:border-gray-700">
+                <p className="mb-1">
+                  <span className="font-semibold">Name:</span>
+                  {consignment?.trader?.name}
                 </p>
-                <p>
-                  <strong>Address:</strong> {consignment.trader.address}
+                <p className="mb-1">
+                  <span className="font-semibold">Address:</span>
+                  {consignment?.trader?.address}
                 </p>
-                <p>
-                  <strong>Country:</strong> {consignment.trader.country}
+                <p className="mb-1">
+                  <span className="font-semibold">Country:</span>
+                  {consignment?.trader?.country}
                 </p>
-                <p>
-                  <strong>NTN:</strong> {consignment.trader.ntn}
+                <p className="mb-1">
+                  <span className="font-semibold">NTN:</span>
+                  {consignment?.trader?.ntn}
                 </p>
               </td>
-              <td className="p-2">
-                <p>
-                  <strong>Name:</strong> {consignment.consignee.name}
+              <td className="p-3">
+                <p className="mb-1">
+                  <span className="font-semibold">Name:</span>
+                  {consignment?.consignee?.name}
                 </p>
-                <p>
-                  <strong>Address:</strong> {consignment.consignee.address}
+                <p className="mb-1">
+                  <span className="font-semibold">Address:</span>
+                  {consignment?.consignee?.address}
                 </p>
-                <p>
-                  <strong>Country:</strong> {consignment.consignee.country}
+                <p className="mb-1">
+                  <span className="font-semibold">Country:</span>
+                  {consignment?.consignee?.country}
                 </p>
               </td>
             </tr>
           </tbody>
         </table>
-
         {/* Airway Bill & Goods Declaration Table */}
-        <table className="w-full mb-4">
+        <table className="table w-full mb-6 border border-gray-200 dark:border-gray-700">
           <thead>
-            <tr className="bg-gray-200 dark:bg-gray-700">
-              <th className="p-2 text-left">Airway Bill</th>
-              <th className="p-2 text-left">Goods Declaration</th>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="p-3  w-1/2 text-left border-b border-gray-200 dark:border-gray-700">
+                Airway/Seaway Bill
+              </th>
+              <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                Goods Declaration
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="p-2 border-r border-gray-200 dark:border-gray-700">
-                <p>
-                  <strong>Number:</strong> {consignment.airwayBill.number}
+              <td className="p-3 border-r border-gray-200 dark:border-gray-700 ">
+                <p className="mb-1">
+                  <span className="font-semibold">Number:</span>
+                  {consignment?.airwayBill?.number}
                 </p>
-                <p>
-                  <strong>Agent:</strong>{" "}
-                  {consignment.airwayBill.iataAgent.name}
+                <p className="mb-1">
+                  <span className="font-semibold">Agent:</span>
+                  {consignment?.airwayBill?.iataAgent?.name}
                 </p>
-                <p>
-                  <strong>Station:</strong>{" "}
-                  {consignment.airwayBill.iataAgent.station}
+                <p className="mb-1">
+                  <span className="font-semibold">Station:</span>
+                  {consignment?.airwayBill?.iataAgent?.station}
                 </p>
-                <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(consignment.airwayBill.dateTime).toLocaleString()}
+                <p className="mb-1">
+                  <span className="font-semibold">Date:</span>
+                  {new Date(
+                    consignment?.airwayBill?.dateTime
+                  )?.toLocaleString()}
                 </p>
-                <p>
-                  <strong>Rate:</strong> {consignment.airwayBill.rate}
+                <p className="mb-1">
+                  <span className="font-semibold">Rate:</span>
+                  {consignment?.airwayBill?.rate?.toLocaleString()}
                 </p>
-                <p>
-                  <strong>Weight:</strong>{" "}
-                  {consignment.airwayBill.airwayBillWeight} kg
+                <p className="mb-1">
+                  <span className="font-semibold">Weight:</span>
+                  {consignment?.airwayBill?.airwayBillWeight?.toLocaleString()}{" "}
+                  kg
                 </p>
-                <p>
-                  <strong>Fee:</strong> {consignment.airwayBill.fee}
+                <p className="mb-1">
+                  <span className="font-semibold">Fee:</span>
+                  {consignment?.airwayBill?.fee?.toLocaleString()}
+                </p>
+                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                  <span>Total</span>
+                  {totalAirwayBill?.toLocaleString()}
                 </p>
               </td>
-              <td className="p-2">
-                <p>
-                  <strong>Number:</strong> {consignment.goodsDeclaration.number}
+              <td className="p-3 flex flex-col">
+                <p className="mb-1">
+                  <span className="font-semibold">Number:</span>
+                  {consignment?.goodsDeclaration?.number}
                 </p>
-                <p>
-                  <strong>Date:</strong>{" "}
+                <p className="mb-1">
+                  <span className="font-semibold">Date:</span>
                   {new Date(
-                    consignment.goodsDeclaration.date
+                    consignment?.goodsDeclaration?.date
                   ).toLocaleDateString()}
                 </p>
-                <p>
-                  <strong>Exchange Rate:</strong>{" "}
-                  {consignment.goodsDeclaration.exchangeRate}
+                <p className="mb-1">
+                  <span className="font-semibold">Exchange Rate:</span>
+                  {consignment?.goodsDeclaration?.exchangeRate}
                 </p>
-                <p>
-                  <strong>Invoice No:</strong>{" "}
-                  {consignment.goodsDeclaration.commercialInvoiceNumber}
+                <p className="mb-1">
+                  <span className="font-semibold">Invoice No:</span>
+                  {consignment?.goodsDeclaration?.commercialInvoiceNumber}
                 </p>
-                <p>
-                  <strong>FOB:</strong> {consignment.goodsDeclaration.fob}
+                <p className="mb-1">
+                  <span className="font-semibold">FOB:</span>
+                  {consignment?.goodsDeclaration?.fob}
                 </p>
-                <p>
-                  <strong>GD Freight:</strong>
-                  {consignment.goodsDeclaration.gdFreight}
+                <p className="mb-1">
+                  <span className="font-semibold">GD Freight:</span>
+                  {consignment?.goodsDeclaration?.gdFreight}
+                </p>{" "}
+                <p className="mt-3 flex justify-between p-1 bg-gray-200 font-semibold">
+                  <span>CFR</span>
+                  {CFR.toLocaleString()}
                 </p>
               </td>
             </tr>
           </tbody>
         </table>
-
         {/* Custom Clearance & Packing Table */}
-        <table className="w-full mb-4">
+        <table className="table w-full mb-6 border border-gray-200 dark:border-gray-700">
           <thead>
-            <tr className="bg-gray-200 dark:bg-gray-700">
-              <th className="p-2 text-left">Custom Clearance</th>
-              <th className="p-2 text-left">Packing</th>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="p-3 w-1/2 text-left border-b border-gray-200 dark:border-gray-700">
+                Custom Clearance
+              </th>
+              <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                Packing
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="p-2 border-r border-gray-200 dark:border-gray-700">
-                <p>
-                  <strong>Custom Agent Name:</strong>{" "}
-                  {consignment.customClearance.ca.name}
+              <td className="p-3 border-r border-gray-200 dark:border-gray-700">
+                <p className="mb-1">
+                  <span className="font-semibold">Custom Agent Name:</span>
+                  {consignment?.customClearance?.ca?.name}
                 </p>
-                <p>
-                  <strong>Custom Agent Station:</strong>{" "}
-                  {consignment.customClearance.ca.station}
+                <p className="mb-1">
+                  <span className="font-semibold">Custom Agent Station:</span>
+                  {consignment?.customClearance?.ca?.station}
                 </p>
-                <p>
-                  <strong>Fee:</strong> {consignment.customClearance.fee}
+                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                  <span>Fee</span>
+                  {consignment?.customClearance?.fee?.toLocaleString()}
                 </p>
               </td>
-              <td className="p-2">
-                <p>
-                  <strong>Packer:</strong> {consignment.packing.packer.name}
+              <td className="p-3">
+                <p className="mb-1">
+                  <span className="font-semibold">Packer:</span>
+                  {consignment?.packing?.packer?.name}
                 </p>
-                <p>
-                  <strong>Station:</strong> {consignment.packing.packer.station}
+                <p className="mb-1">
+                  <span className="font-semibold">Station:</span>
+                  {consignment?.packing?.packer?.station}
                 </p>
-                <p>
-                  <strong>Rate per Kg:</strong> {consignment.packing.ratePerKg}
+                <p className="mb-1">
+                  <span className="font-semibold">Rate per Kg:</span>
+                  {consignment?.packing?.ratePerKg}
+                </p>
+                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                  <span>Total</span>
+                  {totalPackingAmount}
                 </p>
               </td>
             </tr>
           </tbody>
+          {/* Financial Instrument */}
         </table>
-
-        {/* Goods Table */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+        {fiuData.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
+              Financial Instrument Utilization
+            </h2>
+            <table className="table w-full border border-gray-200 dark:border-gray-700">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-gray-700">
+                  <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                    Instrument
+                  </th>
+                  <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                    Amount
+                  </th>
+                  <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                    Utilized
+                  </th>
+                  <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                    Balance
+                  </th>
+                  <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                    Expiry
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {fiuData.map((fiu, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <td className="p-3">{fiu.financialInstrument?.number}</td>
+                    <td className="p-3">
+                      {fiu.financialInstrument?.amount?.toLocaleString()}{" "}
+                      {fiu.financialInstrument?.currency}
+                    </td>
+                    <td className="p-3">
+                      {fiu.utilized?.toLocaleString()}{" "}
+                      {fiu.financialInstrument?.currency}
+                    </td>
+                    <td className="p-3">
+                      {fiu.financialInstrument?.balance?.toLocaleString()}{" "}
+                      {fiu.financialInstrument?.currency}
+                    </td>
+                    <td className="p-3">
+                      {fiu.financialInstrument?.expiryDate}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {/* Packaging Table with Total Row */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
             Goods
           </h2>
-          <table className="w-full border-collapse">
+          <table className="table w-full border border-gray-200 dark:border-gray-700">
             <thead>
-              <tr className="bg-gray-200 dark:bg-gray-700">
-                <th className="p-1 text-left">Item</th>
-                <th className="p-1 text-left">Qty</th>
-                <th className="p-1 text-left">Total Weight</th>
-                <th className="p-1 text-left">Packaging</th>
-                <th className="p-1 text-left">Total Commodity Cost</th>
-                <th className="p-1 text-left">Total Packaging Cost</th>
-                <th className="p-1 text-left">Damage</th>
-                <th className="p-1 text-left">Total Cost</th>
+              <tr className="bg-gray-100 dark:bg-gray-700">
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Item
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Qty
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Per Unit
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  ctn Weight
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  ctn tWeight
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Rate per Unit
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  tWeight
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Total Amount
+                </th>
               </tr>
             </thead>
             <tbody>
-              {consignment.goods.map((good, index) => {
-                const totalWeight = good.weightPerUnit * good.quantity;
-                const totalCommodityCost =
-                  good.commodityPerUnitCost * good.quantity;
-                const totalPackagingCost =
-                  good.packagingPerUnitCost * good.quantity;
-                const totalCost = totalCommodityCost + totalPackagingCost;
+              {consignment?.goods?.map((good, index) => {
+                const ctntWeight =
+                  (good.quantity || 0) *
+                  (good.packaging?.packagingWeightPerUnit || 0);
+
+                const totalWeight =
+                  (good.weightPerUnit || 0) * (good.quantity || 0);
+                const totalAmount =
+                  totalWeight * (good.commodityPerUnitCost || 0);
 
                 return (
                   <tr
                     key={index}
                     className="border-b border-gray-200 dark:border-gray-700"
                   >
-                    <td className="p-1">{good.item.name}</td>
-                    <td className="p-1">{good.quantity}</td>
-                    <td className="p-1">{totalWeight.toFixed(1)} kg</td>
-                    <td className="p-1">{good.packaging.name}</td>
-                    <td className="p-1">{totalCommodityCost}</td>
-                    <td className="p-1">{totalPackagingCost}</td>
-                    <td className="p-1">{good.damage.toFixed(2)}</td>
-                    <td className="p-1 font-bold">{totalCost.toFixed(2)}</td>
+                    <td className="p-2">{good?.item?.name}</td>
+                    <td className="p-2">{good?.quantity?.toLocaleString()}</td>
+                    <td className="p-2">
+                      {good?.weightPerUnit?.toFixed(1)?.toLocaleString()} kg
+                    </td>
+                    <td className="p-2">
+                      {good?.packaging?.packagingWeightPerUnit?.toLocaleString() ||
+                        0}
+                      kg
+                    </td>
+                    <td className="p-2">{ctntWeight?.toLocaleString()} kg</td>
+                    <td className="p-2">
+                      {good?.commodityPerUnitCost?.toLocaleString()}
+                    </td>
+                    <td className="p-2">{totalWeight?.toLocaleString()} kg</td>
+                    <td className="p-2 font-semibold ">
+                      {totalAmount?.toLocaleString()}
+                    </td>
                   </tr>
                 );
               })}
+              {/* Total Row */}
+              <tr className="bg-gray-100 dark:bg-gray-700 font-semibold">
+                <td className="p-2">TOTAL</td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2">{totalWeight?.toLocaleString()} kg</td>
+                <td className="p-2">{totalGoodsAmount?.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>{" "}
+        {/* Goods Table with Total Row */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">
+            Packaging
+          </h2>
+          <table className="table w-full border border-gray-200 dark:border-gray-700">
+            <thead>
+              <tr className="bg-gray-100 dark:bg-gray-700">
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Packing Material
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Quantity
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Price
+                </th>
+                <th className="p-2 text-left border-b border-gray-200 dark:border-gray-700">
+                  Total Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {consignment?.goods?.map((good, index) => {
+                return (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <td className="p-2">{good?.packaging?.name}</td>
+                    <td className="p-2">{good?.quantity?.toLocaleString()}</td>
+                    <td className="p-2">
+                      {good?.packagingPerUnitCost?.toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      {(
+                        good?.packagingPerUnitCost * good?.quantity
+                      )?.toLocaleString() || 0}
+                    </td>
+                  </tr>
+                );
+              })}
+              {/* Total Row */}
+              <tr className="bg-gray-100 dark:bg-gray-700 font-semibold">
+                <td className="p-2">TOTAL</td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2">{totalPackagingCost?.toLocaleString()}</td>
+              </tr>
             </tbody>
           </table>
         </div>
-
         {/* Totals & Recovery */}
-        <table className="w-full mb-4">
+        <table className="table w-full mb-6 border border-gray-200 dark:border-gray-700">
           <thead>
-            <tr className="bg-gray-200 dark:bg-gray-700">
-              <th className="p-2 text-left">Totals</th>
-              <th className="p-2 text-left">Recovery</th>
+            <tr className="bg-gray-100 dark:bg-gray-700 ">
+              <th className="p-3 text-left border-b w-1/2 border-gray-200 dark:border-gray-700">
+                Totals
+              </th>
+              <th className="p-3 text-left border-b border-gray-200 dark:border-gray-700">
+                Recovery
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="p-2 border-r border-gray-200 dark:border-gray-700">
-                <p>
-                  <strong>Total Weight:</strong>{" "}
-                  {consignment.localInvoiceWeight} kg
+              <td className="p-3 border-r border-gray-200 dark:border-gray-700 ">
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Net Weight</span>
+                  {netWeight?.toLocaleString()} kg
                 </p>
-                <p>
-                  <strong>Daily Expenses:</strong> {consignment.dailyExpenses}
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Tare Weight</span>
+                  {tareWeight?.toLocaleString()} kg
                 </p>
-                <p>
-                  <strong>Status:</strong> {consignment.status}
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Gross Weight</span>
+                  {grossWeight?.toLocaleString()} kg
+                </p>
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Daily Expenses</span>
+                  {consignment?.dailyExpenses?.toLocaleString()}
+                </p>
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Status</span>
+                  <span
+                    className={`${
+                      consignment?.status == "Fulfilled"
+                        ? "text-green-500 p-1 "
+                        : "text-red-500 p-1 "
+                    }`}
+                  >
+                    {consignment?.status}
+                  </span>
+                </p>
+                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                  <span>Total Cost</span>
+                  {(
+                    totalAirwayBill +
+                    totalPackagingCost +
+                    totalGoodsAmount +
+                    totalPackingAmount +
+                    dailyExpenses +
+                    customFee
+                  ).toLocaleString()}
                 </p>
               </td>
-              <td className="p-2">
-                <p>
-                  <strong>Amount:</strong> {consignment.recoveryDone.amount}
+              <td className="p-3 flex flex-col">
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Amount:</span>
+                  {consignment?.recoveryDone?.amount}
                 </p>
-                <p>
-                  <strong>Currency:</strong> {consignment.recoveryDone.currency}
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Currency:</span>
+                  {consignment?.recoveryDone?.currency}
                 </p>
-                <p>
-                  <strong>Exchange Rate:</strong>{" "}
-                  {consignment.recoveryDone.exchangeRate}
+                <p className="mb-1 border-b-2 flex justify-between">
+                  <span className="font-semibold">Exchange Rate:</span>
+                  {consignment?.recoveryDone?.exchangeRate}
+                </p>
+                <p className="mt-3 p-1 flex justify-between  bg-gray-200 font-bold">
+                  <span>Total Recovery :</span>{" "}
+                  {totalRecovery?.toLocaleString()}
                 </p>
               </td>
             </tr>
           </tbody>
         </table>
-        <div className="bg-gray-100 text-xs dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-md shadow-md font-medium inline-block">
-          🧾 Invoice generated on:
-          <span className="ml-2  font-semibold text-blue-600 dark:text-blue-400">
-            {moment().format("MMMM Do YYYY, h:mm:ss a")}
+        <h1 className="w-full font-bold flex gap-4 justify-center items-center p-2 bg-gray-200">
+          <span>Grand Total (Recovery - Total Cost) = </span>
+          <span>
+            {(
+              totalRecovery -
+              (totalAirwayBill +
+                totalPackagingCost +
+                totalGoodsAmount +
+                totalPackingAmount +
+                dailyExpenses +
+                customFee)
+            ).toLocaleString()}
           </span>
-        </div>
+        </h1>
+        {/* <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          Invoice generated on: {moment().format("MMMM Do YYYY, h:mm:ss a")}
+        </div> */}
       </div>
 
       {/* Buttons */}
@@ -401,12 +1265,12 @@ const Invoice = () => {
           className="bg-[#217346] text-white px-4 py-2 rounded-lg shadow hover:bg-[#1A5A36] transition"
         >
           Export to Excel
-        </motion.button>{" "}
+        </motion.button>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={generatePDF}
-          className="bg-SecondaryButton text-white px-4 py-2 rounded-lg shadow-lg hover:bg-SecondaryButtonHover transition-all dark:bg-blue-500 dark:hover:bg-blue-600"
+          className="bg-SecondaryButton text-white px-4 py-2 rounded-lg shadow hover:bg-SecondaryButtonHover transition dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           Download PDF
         </motion.button>
@@ -420,17 +1284,34 @@ const Invoice = () => {
         </motion.button>
       </div>
 
-      {/* Print Styles (hidden on screen) */}
+      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           body {
-            background: white;
-            color: black;
+            background: white !important;
+            color: black !important;
+            font-size: 12px;
           }
           .print-area {
-            width: 100%;
-            font-size: 14px;
-            color: black;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+            color: black !important;
+          }
+          table {
+            page-break-inside: avoid;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          thead {
+            display: table-header-group;
+          }
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>

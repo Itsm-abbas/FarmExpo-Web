@@ -1,12 +1,15 @@
 import axios from "axios";
 import { getCookie } from "cookies-next";
+import Swal from "sweetalert2";
+
 const token = getCookie("token");
+
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   // timeout: 10000, // Request timeout
 });
 
-// Add request interceptors (e.g., for adding headers)
+// Add request interceptors
 axiosInstance.interceptors.request.use(
   (config) => {
     if (token) {
@@ -19,12 +22,19 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add response interceptors (e.g., for handling errors)
+// Add response interceptors
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      window.location.href = "/auth/login";
+      Swal.fire({
+        icon: "warning",
+        title: "Session Expired",
+        text: "Your session has expired. Please log in again.",
+        confirmButtonText: "OK",
+      }).then(() => {
+        window.location.href = "/auth/login"; // Redirect after user acknowledges alert
+      });
     }
     return Promise.reject(error);
   }

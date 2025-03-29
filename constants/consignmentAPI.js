@@ -28,10 +28,7 @@ export const api_endpoint = {
 // };
 
 // ✅ API Requests with Authentication
-export const fetchUser = async () => {
-  const response = await axiosInstance.get("/users/me");
-  return response.data;
-};
+
 export const createConsignment = async (consignmentData) => {
   const response = await axiosInstance.post("/consignment", consignmentData);
   return response.data;

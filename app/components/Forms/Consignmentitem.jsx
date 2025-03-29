@@ -33,7 +33,7 @@ export default function ConsignmentItemForm({ consignmentId }) {
   const handlePackagingChange = (e) => {
     const selectedId = e.target.value;
     if (selectedId === "add-new-packaging") {
-      router.push("packaging/add-packaging");
+      router.push("/consignment/packaging/add-packaging");
     } else {
       const selectedPackaging = packaging.find(
         (pack) => pack.id === parseInt(selectedId)

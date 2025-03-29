@@ -7,14 +7,10 @@ import { FaArrowRight, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { SidebarLinks } from "@constants/Links";
 import fonts from "@utils/fonts";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { fetchUser } from "@constants/consignmentAPI";
+// import { useQuery } from "@tanstack/react-query";
+// import { fetchUser } from "@constants/consignmentAPI";
 
 export default function Sidebar({ isSidebarOpen, onClose }) {
-  const { data } = useQuery({
-    queryKey: ["user"],
-    queryFn: fetchUser,
-  });
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const toggleDropdown = (index) => {
@@ -49,13 +45,27 @@ export default function Sidebar({ isSidebarOpen, onClose }) {
       )}
 
       <motion.div
-        className={`${fonts?.poppins.className} sidebar-content fixed top-0 left-0 h-full w-64 sm:w-72 bg-gray-200 shadow-lg text-black dark:bg-gray-900 dark:text-white z-50 
+        className={`${fonts?.poppins.className}   sidebar-content fixed top-0 left-0 h-full w-64 sm:w-72 bg-gray-200 shadow-lg text-black dark:bg-gray-900 dark:text-white z-50 
           overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-300 dark:scrollbar-track-gray-800`}
         initial={{ x: "-100%" }}
         animate={{ x: isSidebarOpen ? "0%" : "-100%" }}
         transition={{ duration: 0.3 }}
       >
-        <div className="w-full flex flex-col items-center justify-center p-4">
+        <p className=" flex items-center justify-center w-full py-4">
+          <motion.span
+            className="text-PrimaryButton text-3xl"
+            whileHover={{ scale: 1.1 }}
+          >
+            Farm
+          </motion.span>
+          <motion.span
+            className="text-LightPText dark:text-DarkPText text-2xl"
+            whileHover={{ scale: 1.1 }}
+          >
+            Expo
+          </motion.span>
+        </p>
+        {/* <div className="w-full flex flex-col items-center justify-center p-4">
           <Image
             className="rounded-full border-2 border-white"
             src="/profile.png"
@@ -65,8 +75,9 @@ export default function Sidebar({ isSidebarOpen, onClose }) {
           />
           <p className="mt-2 font-semibold text-base sm:text-lg">
             {data?.fullName}
+            User
           </p>
-        </div>
+        </div> */}
 
         <nav className="flex flex-col space-y-4 p-4">
           {SidebarLinks.map((category, index) => (

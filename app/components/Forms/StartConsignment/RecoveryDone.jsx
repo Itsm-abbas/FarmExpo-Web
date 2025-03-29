@@ -33,10 +33,9 @@ export default function RecoveryDoneForm({
     }
     if (existingData) {
       if (
-        formData.ntn === existingData.ntn &&
-        formData.name === existingData.name &&
-        formData.address === existingData.address &&
-        formData.country === existingData.country
+        formData.amount === existingData.amount &&
+        formData.currency === existingData.currency &&
+        formData.exchangeRate === existingData.exchangeRate
       ) {
         MySwal.fire({
           icon: "error",
@@ -63,9 +62,13 @@ export default function RecoveryDoneForm({
       const { id } = await response.json();
 
       if (existingData) {
-        await UpdateConsignment(consignmentId, {
-          recoveryDone: { id, ...formData },
-        });
+        await UpdateConsignment(
+          consignmentId,
+          {
+            recoveryDone: { id, ...formData },
+          },
+          "Fulfilled"
+        );
       } else {
         await UpdateConsignment(
           consignmentId,

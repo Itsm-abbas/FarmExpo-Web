@@ -10,7 +10,7 @@ export function middleware(req) {
   const { pathname } = req.nextUrl;
 
   // 🔹 Allow access to login and signup pages only if there is NO token
-  if ((pathname === "/auth/login" || pathname === "/auth/signup") && token) {
+  if (pathname === "/auth/login" && token) {
     return NextResponse.redirect(new URL("/", req.url)); // Redirect logged-in users to home
   }
 

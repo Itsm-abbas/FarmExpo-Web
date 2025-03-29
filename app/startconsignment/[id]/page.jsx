@@ -13,19 +13,26 @@ import {
   FaCheck,
   FaChevronDown,
   FaChevronUp,
+  FaLock,
 } from "react-icons/fa";
 import GoodsDeclarationForm from "@forms/StartConsignment/GoodsDeclaration";
 import font from "@utils/fonts";
 import Link from "next/link";
 import DamageForm from "@components/Forms/StartConsignment/Damage";
 import { motion, AnimatePresence } from "framer-motion";
-import PackagingForm from "@components/Forms/StartConsignment/Packaging";
 import axiosInstance from "@utils/axiosConfig";
+import Swal from "sweetalert2";
+import DailyExpenses from "@components/Forms/StartConsignment/DailyExpenses";
 
 const formsData = [
-  { id: 1, name: "Consignee", component: ConsigneeForm, key: "consignee" },
-  { id: 2, name: "Trader", component: TraderForm, key: "trader" },
-  { id: 3, name: "Airway Bill", component: AirwayBill, key: "airwayBill" },
+  { id: 1, name: "Trader", component: TraderForm, key: "trader" },
+  { id: 2, name: "Consignee", component: ConsigneeForm, key: "consignee" },
+  {
+    id: 3,
+    name: "Airway Bill/Seaway Bill",
+    component: AirwayBill,
+    key: "airwayBill",
+  },
   {
     id: 4,
     name: "Goods Declaration",
@@ -41,10 +48,16 @@ const formsData = [
   { id: 6, name: "Packing", component: Packing, key: "packing" },
   {
     id: 9,
-    name: "Packaging",
-    component: PackagingForm,
-    key: "goods/packaging",
+    name: "Daily Expenses",
+    component: DailyExpenses,
+    key: "dailyExpenses",
   },
+  // {
+  //   id: 9,
+  //   name: "Packaging",
+  //   component: PackagingForm,
+  //   key: "goods/packaging",
+  // },
   {
     id: 7,
     name: "Recovery",
@@ -66,12 +79,15 @@ export default function StartConsignmentPage() {
   const [activeAccordion, setActiveAccordion] = useState(null);
   const accordionRefs = useRef({}); // Store refs for each accordion
   const [itemsLength, setItemsLength] = useState(0);
+  const [isFulfilled, setIsFulfilled] = useState(false); // Track if status is 'fulfilled'
+
   const fetchFormStatuses = async () => {
     try {
       const response = await axiosInstance.get(`/consignment/${consignmentId}`);
       const { data } = response;
       setFormStatuses(data);
       setItemsLength(data.goods.length);
+      setIsFulfilled(data.status === "Fulfilled"); // Check if status is 'fulfilled'
     } catch (error) {
       console.error("Error fetching statuses:", error);
     }
@@ -82,7 +98,35 @@ export default function StartConsignmentPage() {
   }, []);
 
   const toggleAccordion = (id) => {
-    setActiveAccordion(activeAccordion === id ? null : id);
+    // Check if the form is locked (status is 'fulfilled' and form is not Recovery or Damage)
+    const form = formsData.find((f) => f.id === id);
+    const isLocked =
+      isFulfilled && form.key !== "recoveryDone" && form.key !== "goods/damage";
+
+    // If the accordion is already open, minimize it without showing the modal
+    if (activeAccordion === id) {
+      setActiveAccordion(null);
+      return;
+    }
+
+    // If the form is locked and the accordion is closed, show the confirmation modal
+    if (isLocked && activeAccordion !== id) {
+      Swal.fire({
+        title: "Are you sure?",
+        text: "This consignment is marked as fulfilled. Are you sure you want to edit this?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, edit it!",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setActiveAccordion(id); // Open the accordion
+        }
+      });
+    } else {
+      setActiveAccordion(id); // Open the accordion
+    }
 
     // Scroll the accordion into view
     setTimeout(() => {
@@ -121,13 +165,19 @@ export default function StartConsignmentPage() {
         {/* Accordion */}
         {formsData.map((form) => {
           const FormComponent = form.component;
-          // const isSubmitted = formStatuses[form.key];
           const isSubmitted =
             form.key === "goods/packaging"
               ? formStatuses.goods?.some((item) => item?.packaging)
               : form.key === "goods/damage"
               ? formStatuses.goods?.some((item) => item?.damage)
               : formStatuses[form.key];
+
+          // Check if the form is locked
+          const isLocked =
+            isFulfilled &&
+            form.key !== "recoveryDone" &&
+            form.key !== "goods/damage";
+
           return (
             <div
               key={form.id}
@@ -150,12 +200,14 @@ export default function StartConsignmentPage() {
                       <span className="line-through mr-4 text-sm text-gray-600">
                         Add {form.name}
                       </span>
-                      <span className="text-xl">Submitted</span>
+                      <span className="text-sm md:text-lg">Submitted</span>
                     </>
                   ) : (
                     <p>Add {form.name}</p>
                   )}
-                  <span className="ml-2">{isSubmitted && <FaCheck />}</span>
+                  <span className="ml-2 text-sm md:text-lg">
+                    {isSubmitted != null && isSubmitted != 0 && <FaCheck />}
+                  </span>
                 </h2>
                 <span className="text-sm">
                   {activeAccordion === form.id ? (
@@ -165,8 +217,17 @@ export default function StartConsignmentPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
-                      <span>{isSubmitted ? "Click to Edit" : "Expand"}</span>
-                      <FaChevronDown />
+                      {isLocked ? (
+                        <span className="flex items-center justify-center ">
+                          Locked
+                          <FaLock className="ml-2" />
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          {isSubmitted ? "Click to Edit" : "Expand"}{" "}
+                          <FaChevronDown />
+                        </span>
+                      )}
                     </div>
                   )}
                 </span>

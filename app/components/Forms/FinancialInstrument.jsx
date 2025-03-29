@@ -158,6 +158,7 @@ export default function FinancialInstrumentForm() {
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
+            type="text"
             id="number"
             placeholder="Number"
             value={formData.number}

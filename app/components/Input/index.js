@@ -2,7 +2,14 @@ import React, { useState } from "react";
 import fonts from "@utils/fonts";
 import { motion } from "framer-motion";
 
-const Input = ({ id, type = "text", value, onChange, placeholder }) => {
+const Input = ({
+  id,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  classes = "",
+}) => {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -39,7 +46,7 @@ const Input = ({ id, type = "text", value, onChange, placeholder }) => {
         id={id}
         type={type}
         min={1}
-        className={`text-black dark:text-white mb-4 ${
+        className={`${classes} text-black dark:text-white mb-4 ${
           type !== "date" && "mt-7"
         } block w-full border border-LightBorder dark:border-DarkBorder dark:bg-DarkInput rounded-md p-2 focus:ring-PrimaryButton focus:border-PrimaryButton dark:focus:ring-PrimaryButton dark:focus:border-PrimaryButton outline-none`}
         value={value}

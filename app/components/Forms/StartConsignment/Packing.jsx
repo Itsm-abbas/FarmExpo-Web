@@ -65,11 +65,7 @@ const Packing = ({
       const { id } = await response.json();
 
       if (!existingData) {
-        await UpdateConsignment(
-          consignmentId,
-          { packing: { id, ...payload } },
-          "Pending"
-        );
+        await UpdateConsignment(consignmentId, { packing: { id, ...payload } });
       }
 
       setFormStatuses((prev) => ({

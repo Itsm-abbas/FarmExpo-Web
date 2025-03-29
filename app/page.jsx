@@ -10,25 +10,20 @@ import fonts from "@utils/fonts";
 import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 import { AnimatePresence, motion } from "framer-motion";
 import LinkButton from "@components/Button/LinkButton";
-import { fetchConsignments, fetchUser } from "@constants/consignmentAPI";
+// import { fetchConsignments } from "@constants/consignmentAPI";
 import axiosInstance from "@utils/axiosConfig";
+import getUserDataFromToken from "@utils/decodeToken";
 
 export default function Home() {
+  // const userData = getUserDataFromToken();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [greeting, setGreeting] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const [selectedDate, setSelectedDate] = useState(""); // State to store the selected date
+  const [data, setData] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch consignments
-  const { isLoading, data } = useQuery({
-    queryKey: ["consignments"],
-    queryFn: fetchConsignments,
-  });
-  const { data: userData } = useQuery({
-    queryKey: ["user"],
-    queryFn: fetchUser,
-  });
   // Mutation for starting a new consignment
   const startConsignmentMutation = useMutation({
     mutationFn: async (date) => {
@@ -52,7 +47,7 @@ export default function Home() {
       await axiosInstance.delete(`/consignment/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(["consignments"]);
+      fetchConsignments();
       Swal.fire({
         position: "top-center",
         icon: "success",
@@ -127,6 +122,24 @@ export default function Home() {
     setGreeting(getGreeting());
   }, []);
 
+  // Fetch consignments
+  const fetchConsignments = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get("/consignment");
+      setData(response.data); // Update the data state
+    } catch (error) {
+      console.error("Failed to fetch consignments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch consignments on component mount
+  useEffect(() => {
+    fetchConsignments();
+  }, []);
+
   return (
     <motion.div
       className="py-24"
@@ -158,7 +171,7 @@ export default function Home() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full bg-DarkPBg text-LightPText dark:text-DarkPText p-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-PrimaryButton focus:outline-none"
+                className="w-full  text-LightPText dark:bg-DarkPBg dark:text-DarkPText p-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-PrimaryButton focus:outline-none"
               />
               <div className="flex justify-end gap-2">
                 <motion.button
@@ -185,7 +198,7 @@ export default function Home() {
       <div className="flex flex-col md:flex-row gap-24 md:gap-8 md:justify-between">
         {/* Left Section */}
         <motion.div
-          className="flex flex-col justify-center items-start space-y-10"
+          className="flex flex-col  items-start space-y-10 md:py-10"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -197,7 +210,7 @@ export default function Home() {
               animate={{ scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              {userData?.fullName.trim().split(" ")[0]}
+              {/* {userData?.fullName.trim().split(" ")[0]} */}
             </motion.span>
           </h1>
           <motion.button
@@ -217,14 +230,14 @@ export default function Home() {
             {!startConsignmentMutation.isPending && <FaArrowRight />}
           </motion.button>
           <motion.button
-            onClick={() => router.push("/selectLedger")}
+            // onClick={() => router.push("/selectLedger")}
             className={`${fonts.poppins.className} cursor-pointer text-sm sm:text-base flex gap-2 items-center px-3 sm:px-5 py-2 bg-SecondaryButton hover:bg-SecondaryButtonHover text-white rounded-lg transition`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={startConsignmentMutation.isPending}
           >
             View Ledger
-            <FaEye />
+            <FaEye />- Coming soon...
           </motion.button>
         </motion.div>
 

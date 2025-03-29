@@ -2,13 +2,14 @@
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { fetchCustomAgents } from "@constants/consignmentAPI";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewCustomAgent = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["customagents"],
     queryFn: fetchCustomAgents,
@@ -27,16 +28,19 @@ const ViewCustomAgent = () => {
 
       if (result.isConfirmed) {
         const response = await axiosInstance.delete(`/customagent/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to delete customagent.");
+        if (response.status === 204) {
+          Swal.fire({
+            position: "top-center",
+            icon: "success",
+            title: "Deleted Successfully",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+
+          queryClient.invalidateQueries(["customagents"]);
+        } else {
+          throw new Error("Unexpected response status: " + response.status);
         }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted Successfully",
-          showConfirmButton: false,
-          timer: 1500,
-        });
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");

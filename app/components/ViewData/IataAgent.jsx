@@ -2,12 +2,13 @@
 import LinkButton from "@components/Button/LinkButton";
 import ReusableTable from "@components/Table";
 import { fetchIata } from "@constants/consignmentAPI";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@utils/axiosConfig";
 import { useRouter } from "next/navigation";
 import { MdEdit } from "react-icons/md";
 import Swal from "sweetalert2";
 const ViewIataAgent = () => {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { isLoading, data } = useQuery({
     queryKey: ["iataagents"],
@@ -28,16 +29,19 @@ const ViewIataAgent = () => {
 
       if (result.isConfirmed) {
         const response = await axiosInstance.delete(`/iataagent/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to delete iataagent.");
+        if (response.status === 204) {
+          Swal.fire({
+            position: "top-center",
+            icon: "success",
+            title: "Deleted Successfully",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+
+          queryClient.invalidateQueries(["iataagents"]);
+        } else {
+          throw new Error("Unexpected response status: " + response.status);
         }
-        Swal.fire({
-          position: "top-center",
-          icon: "success",
-          title: "Deleted Successfully",
-          showConfirmButton: false,
-          timer: 1500,
-        });
       }
     } catch (error) {
       Swal.fire("Error!", error.message, "error");

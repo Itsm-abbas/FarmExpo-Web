@@ -16,7 +16,6 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
@@ -44,17 +43,14 @@ export default function Login() {
       }
 
       const result = await response.json();
-      if (result.token) {
-        setCookie("token", result.token, { secure: true });
-      }
-      const s = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: "Logged in successfully! Click Ok to go to Home page",
+
+      setCookie("token", result.token, {
+        secure: window.location.protocol === "https:",
+        maxAge: 3600, // Expires in 1 hour
       });
-      if (s.isConfirmed) {
-        router.push("/");
-      }
+
+      // Automatically redirect to the home page
+      router.push("/");
     } catch (error) {
       Swal.fire({ icon: "error", title: "Error", text: error.message });
     } finally {
@@ -64,11 +60,25 @@ export default function Login() {
 
   return (
     <motion.div
-      className={`${fonts.poppins.className} py-14 flex items-center justify-center bg-gray-100 dark:bg-gray-800`}
+      className={`${fonts.poppins.className} py-14 flex flex-col gap-10 items-center justify-center bg-gray-100 dark:bg-gray-800`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      <p className="hidden md:flex gap-1 items-center">
+        <motion.span
+          className="text-PrimaryButton text-3xl"
+          whileHover={{ scale: 1.1 }}
+        >
+          Farm
+        </motion.span>
+        <motion.span
+          className="text-LightPText dark:text-DarkPText text-2xl"
+          whileHover={{ scale: 1.1 }}
+        >
+          Expo
+        </motion.span>
+      </p>
       <motion.div
         className="bg-white dark:bg-gray-900 shadow-lg rounded-lg p-8 w-full max-w-md"
         initial={{ y: -20, opacity: 0 }}
@@ -143,7 +153,7 @@ export default function Login() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <label className="flex items-center space-x-2">
+            {/* <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 checked={rememberMe}
@@ -151,13 +161,13 @@ export default function Login() {
                 className="text-green-600"
               />
               <span>Remember Me</span>
-            </label>
-            <Link
+            </label> */}
+            {/* <Link
               href="/auth/forgot-password"
               className="text-sm text-green-600 hover:underline"
             >
               Forgot Password?
-            </Link>
+            </Link> */}
           </motion.div>
           <motion.button
             type="submit"
@@ -168,7 +178,7 @@ export default function Login() {
           >
             {isLoading ? "Logging in..." : "Login"}
           </motion.button>
-          <div className="space-y-3 uppercase flex justify-center items-center w-full">
+          {/* <div className="space-y-3 uppercase flex justify-center items-center w-full">
             or
           </div>
 
@@ -181,7 +191,7 @@ export default function Login() {
             >
               Create Account
             </motion.button>
-          </Link>
+          </Link> */}
         </form>
       </motion.div>
     </motion.div>

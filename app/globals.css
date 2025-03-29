@@ -77,3 +77,17 @@
     transform: rotate(1turn);
   }
 }
+
+/* Add this to your global CSS */
+@media print {
+  table {
+    page-break-inside: avoid;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  thead {
+    display: table-header-group;
+  }
+}
