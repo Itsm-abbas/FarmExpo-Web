@@ -9,8 +9,13 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Input from "@components/Input";
 import { getCookie } from "cookies-next";
-import PackagingForm from "@components/Forms/StartConsignment/Packaging";
-import { FaArrowRight } from "react-icons/fa";
+import { FaArrowRight, FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { useQuery } from "@tanstack/react-query";
+import {
+  fetchConsignmentById,
+  fetchConsignments,
+} from "@constants/consignmentAPI";
+import { LoaderIcon } from "react-hot-toast";
 
 export default function ItemSelectionPage() {
   const router = useRouter();
@@ -21,8 +26,10 @@ export default function ItemSelectionPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [showDetailInput, setshowDetailInput] = useState(false);
+  const [showDetailInput, setShowDetailInput] = useState(false);
+  const [showDetailsView, setShowDetailsView] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
+  const [currentDetailIndex, setCurrentDetailIndex] = useState(null);
   const [itemDetail, setItemDetail] = useState({
     qty: "",
     weightPerUnit: "",
@@ -31,6 +38,17 @@ export default function ItemSelectionPage() {
     packaging: null,
   });
   const [packagingOptions, setPackagingOptions] = useState([]);
+
+  const {
+    isLoadingGoods,
+    error,
+    data: goods,
+    refetch,
+  } = useQuery({
+    queryKey: ["consignments", id],
+    queryFn: () => fetchConsignmentById(id),
+    select: (data) => data?.goods || [],
+  });
 
   // Fetch packaging data
   useEffect(() => {
@@ -55,7 +73,8 @@ export default function ItemSelectionPage() {
     };
 
     fetchPackaging();
-  }, []);
+  }, [token, apiUrl]);
+
   // Fetch commodities and consignment data
   useEffect(() => {
     const fetchCommodities = async () => {
@@ -98,14 +117,18 @@ export default function ItemSelectionPage() {
 
         // Map existing items with all details
         const existingItems = consignmentData.goods?.reduce((acc, good) => {
-          acc[good.item.id] = {
+          if (!acc[good.item.id]) {
+            acc[good.item.id] = [];
+          }
+          acc[good.item.id].push({
+            id: good.id,
             quantity: good.quantity,
             weightPerUnit: good.weightPerUnit,
             commodityPerUnitCost: good.commodityPerUnitCost,
             packagingPerUnitCost: good.packagingPerUnitCost,
             packaging: good.packaging,
             damage: good.damage,
-          };
+          });
           return acc;
         }, {});
 
@@ -119,117 +142,14 @@ export default function ItemSelectionPage() {
     };
 
     fetchData();
-  }, [id]);
-  // Handle item deselection and removal from consignment
-  const handleDeselectItem = async (item) => {
-    try {
-      // 1. Fetch the current consignment data
-      const consignmentRes = await fetch(`${apiUrl}/consignment/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  }, [id, token, apiUrl]);
 
-      if (!consignmentRes.ok) throw new Error("Failed to fetch consignment");
-      const consignmentData = await consignmentRes.json();
-
-      // 2. Find the consignment item to remove
-      const itemToRemove = consignmentData.goods?.find(
-        (g) => g.item.id === item.id
-      );
-
-      if (itemToRemove) {
-        // 3. First remove the item from consignment's goods array
-        const updatedGoods = consignmentData.goods?.filter(
-          (g) => g.item.id !== item.id
-        );
-
-        const updatedConsignment = {
-          ...consignmentData,
-          goods: updatedGoods,
-        };
-
-        // 4. Update the consignment on the server (remove from /consignment first)
-        const consignmentUpdateRes = await fetch(
-          `${apiUrl}/consignment/${id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(updatedConsignment),
-          }
-        );
-
-        if (!consignmentUpdateRes.ok)
-          throw new Error("Failed to update consignment");
-
-        // 5. Now delete the consignment item from /consignmentitem
-        const deleteResponse = await fetch(
-          `${apiUrl}/consignmentitem/${itemToRemove.id}`,
-          {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!deleteResponse.ok) throw new Error("Failed to delete item");
-      }
-
-      // 6. Update local state
-      setSelectedItems((prev) => {
-        const updatedItems = { ...prev };
-        delete updatedItems[item.id];
-        return updatedItems;
-      });
-
-      Swal.fire({
-        position: "top-center",
-        icon: "success",
-        title: "Item removed!",
-        showConfirmButton: false,
-        timer: 1000,
-      });
-    } catch (error) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message });
-    }
-  };
-  // Updated handleItemSelect function with deselection
   const handleItemSelect = (item) => {
-    if (selectedItems[item.id]) {
-      Swal.fire({
-        title: "Item Already Selected",
-        text: "Do you want to edit this item's details or remove it completely?",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: "Edit Details",
-        cancelButtonText: "Remove Item",
-        reverseButtons: true,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          setCurrentItem(item);
-          setshowDetailInput(true);
-          setItemDetail({
-            qty: selectedItems[item.id].quantity || "",
-            weightPerUnit: selectedItems[item.id].weightPerUnit || "",
-            commodityPerUnitCost:
-              selectedItems[item.id].commodityPerUnitCost || "",
-            packagingPerUnitCost:
-              selectedItems[item.id].packagingPerUnitCost || "",
-            packaging: selectedItems[item.id].packaging || null,
-          });
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-          handleDeselectItem(item); // Call the new deselection function
-        }
-      });
+    setCurrentItem(item);
+    if (selectedItems[item.id]?.length > 0) {
+      setShowDetailsView(true);
     } else {
-      setCurrentItem(item);
-      setshowDetailInput(true);
+      setShowDetailInput(true);
       setItemDetail({
         qty: "",
         weightPerUnit: "",
@@ -240,12 +160,120 @@ export default function ItemSelectionPage() {
     }
   };
 
-  // Handle quantity submission
+  const handleAddNewDetail = () => {
+    setCurrentDetailIndex(null);
+    setShowDetailInput(true);
+    setShowDetailsView(false);
+    setItemDetail({
+      qty: "",
+      weightPerUnit: "",
+      commodityPerUnitCost: "",
+      packagingPerUnitCost: "",
+      packaging: null,
+    });
+  };
+
+  const handleEditDetail = (index) => {
+    setCurrentDetailIndex(index);
+    setShowDetailInput(true);
+    setShowDetailsView(false);
+    setItemDetail({
+      qty: selectedItems[currentItem.id][index].quantity,
+      weightPerUnit: selectedItems[currentItem.id][index].weightPerUnit,
+      commodityPerUnitCost:
+        selectedItems[currentItem.id][index].commodityPerUnitCost,
+      packagingPerUnitCost:
+        selectedItems[currentItem.id][index].packagingPerUnitCost,
+      packaging: selectedItems[currentItem.id][index].packaging,
+    });
+  };
+
+  const handleDeleteDetail = async (detailId) => {
+    const response = await fetch(`${apiUrl}/consignment/${id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch consignment data.");
+    }
+
+    const consignment = await response.json();
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // 1. Update the consignment to remove the item from its goods
+        const updatedGoods = consignment.goods.filter((g) => g.id !== detailId);
+
+        const updateConsignmentResponse = await fetch(
+          `${apiUrl}/consignment/${id}`,
+          {
+            method: "PUT", // or PATCH if your backend supports partial updates
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ ...consignment, goods: updatedGoods }),
+          }
+        );
+
+        if (!updateConsignmentResponse.ok)
+          throw new Error("Failed to update consignment");
+
+        // 2. Now delete the item from /consignmentitem
+        const deleteResponse = await fetch(
+          `${apiUrl}/consignmentitem/${detailId}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        if (!deleteResponse.ok) throw new Error("Failed to delete item");
+
+        // 3. Update local state
+        setSelectedItems((prev) => {
+          const updatedItems = { ...prev };
+          updatedItems[currentItem.id] = updatedItems[currentItem.id].filter(
+            (detail) => detail.id !== detailId
+          );
+          if (updatedItems[currentItem.id].length === 0) {
+            delete updatedItems[currentItem.id];
+          }
+          return updatedItems;
+        });
+
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: "Detail removed!",
+          showConfirmButton: false,
+          timer: 1000,
+        });
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
+      }
+    }
+  };
+
   const handleItemDetail = async () => {
+    refetch();
     if (currentItem) {
       setSubmitLoading(true);
       try {
-        // 1. Prepare the item data
         const itemData = {
           item: { id: currentItem.id },
           quantity: parseFloat(itemDetail.qty) || 0,
@@ -255,10 +283,9 @@ export default function ItemSelectionPage() {
           packagingPerUnitCost:
             parseFloat(itemDetail.packagingPerUnitCost) || 0,
           packaging: itemDetail.packaging,
-          damage: selectedItems[currentItem.id]?.damage || 0,
+          damage: 0,
         };
 
-        // 2. Check if item exists in consignment
         const consignmentRes = await fetch(`${apiUrl}/consignment/${id}`, {
           headers: {
             "Content-Type": "application/json",
@@ -269,15 +296,16 @@ export default function ItemSelectionPage() {
         if (!consignmentRes.ok) throw new Error("Failed to fetch consignment");
         const consignmentData = await consignmentRes.json();
 
-        const existingItem = consignmentData.goods?.find(
-          (g) => g.item.id === currentItem.id
-        );
-        const method = existingItem ? "PUT" : "POST";
-        const url = existingItem
-          ? `${apiUrl}/consignmentitem/${existingItem.id}`
+        let existingItemId = null;
+        if (currentDetailIndex !== null) {
+          existingItemId = selectedItems[currentItem.id][currentDetailIndex].id;
+        }
+
+        const method = existingItemId ? "PUT" : "POST";
+        const url = existingItemId
+          ? `${apiUrl}/consignmentitem/${existingItemId}`
           : `${apiUrl}/consignmentitem`;
 
-        // 3. Save the consignment item
         const itemResponse = await fetch(url, {
           method,
           headers: {
@@ -290,12 +318,12 @@ export default function ItemSelectionPage() {
         if (!itemResponse.ok) throw new Error("Failed to save item");
         const savedItem = await itemResponse.json();
 
-        // 4. Update the consignment's goods array
+        // Update the consignment's goods array
         let updatedGoods = [...(consignmentData.goods || [])];
 
-        if (existingItem) {
+        if (existingItemId) {
           updatedGoods = updatedGoods.map((g) =>
-            g.item.id === currentItem.id ? { ...g, ...savedItem } : g
+            g.id === existingItemId ? { ...g, ...savedItem } : g
           );
         } else {
           updatedGoods.push(savedItem);
@@ -321,24 +349,77 @@ export default function ItemSelectionPage() {
         if (!consignmentUpdateRes.ok)
           throw new Error("Failed to update consignment");
 
-        // 5. Update local state
-        setSelectedItems((prev) => ({
-          ...prev,
-          [currentItem.id]: {
-            ...itemData,
-            id: savedItem.id, // Include the ID from the response
-          },
-        }));
+        const fetchConsignment = async () => {
+          const response = await fetch(`${apiUrl}/consignment/${id}`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch consignment data.");
+          }
+
+          return await response.json();
+        };
+        const fetchData = async () => {
+          setIsLoading(true);
+          try {
+            const [consignmentData] = await Promise.all([fetchConsignment()]);
+
+            // Map existing items with all details
+            const existingItems = consignmentData.goods?.reduce((acc, good) => {
+              if (!acc[good.item.id]) {
+                acc[good.item.id] = [];
+              }
+              acc[good.item.id].push({
+                id: good.id,
+                quantity: good.quantity,
+                weightPerUnit: good.weightPerUnit,
+                commodityPerUnitCost: good.commodityPerUnitCost,
+                packagingPerUnitCost: good.packagingPerUnitCost,
+                packaging: good.packaging,
+                damage: good.damage,
+              });
+              return acc;
+            }, {});
+
+            setSelectedItems(existingItems || {});
+          } catch (error) {
+            Swal.fire({ icon: "error", title: "Error", text: error.message });
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        fetchData();
+        // Update local state
+        // setSelectedItems((prev) => {
+        //   const updatedItems = { ...prev };
+        //   if (!updatedItems[currentItem.id]) {
+        //     updatedItems[currentItem.id] = [];
+        //   }
+
+        //   if (currentDetailIndex !== null) {
+        //     updatedItems[currentItem.id][currentDetailIndex] = savedItem;
+        //   } else {
+        //     updatedItems[currentItem.id].push(savedItem);
+        //   }
+
+        //   return updatedItems;
+        // });
 
         Swal.fire({
           position: "top-center",
           icon: "success",
-          title: "Item saved!",
+          title: "Detail saved!",
           showConfirmButton: false,
           timer: 1000,
         });
 
-        setshowDetailInput(false);
+        setShowDetailInput(false);
+        setShowDetailsView(true);
       } catch (error) {
         Swal.fire({ icon: "error", title: "Error", text: error.message });
       } finally {
@@ -346,47 +427,14 @@ export default function ItemSelectionPage() {
       }
     }
   };
-  // Skip quantity input and proceed
-  const handleSkip = () => {
-    if (currentItem) {
-      // Add the item with default values (all fields are empty or 0)
-      setSelectedItems((prev) => ({
-        ...prev,
-        [currentItem.id]: {
-          quantity: 0,
-          weightPerUnit: 0,
-          commodityPerUnitCost: 0,
-          packagingPerUnitCost: 0,
-          packaging: null,
-        },
-      }));
 
-      // Close the detail input modal and reset the form
-      setshowDetailInput(false);
-      setItemDetail({
-        qty: "",
-        weightPerUnit: "",
-        commodityPerUnitCost: "",
-        packagingPerUnitCost: "",
-        packaging: null,
-      });
+  const handleCancel = () => {
+    setShowDetailInput(false);
+    if (selectedItems[currentItem.id]?.length > 0) {
+      setShowDetailsView(true);
     }
   };
 
-  // Cancel selection and close input modal
-  const handleCancel = () => {
-    // Close the detail input modal and reset the form
-    setshowDetailInput(false);
-    setItemDetail({
-      qty: "",
-      weightPerUnit: "",
-      commodityPerUnitCost: "",
-      packagingPerUnitCost: "",
-      packaging: null,
-    });
-  };
-
-  // Save selected items
   const handleSave = () => {
     router.push(`/startconsignment/${id}`);
   };
@@ -440,16 +488,117 @@ export default function ItemSelectionPage() {
                   <p className="text-sm text-LightPText dark:text-DarkPText">
                     Item Number: {item.number}
                   </p>
+                  {selectedItems[item.id] && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                      {selectedItems[item.id].length}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
           )}
         </div>
 
+        {/* Detail View Modal */}
+        {showDetailsView && (
+          <motion.div
+            className="fixed inset-0 h-full bg-black bg-opacity-50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white dark:bg-gray-800 w-full md:w-2/3 p-6 rounded-lg shadow-lg flex flex-col max-h-[90vh]"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  Details for {currentItem?.name}
+                </h3>
+                <button
+                  onClick={() => setShowDetailsView(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="mb-4">
+                  <button
+                    onClick={handleAddNewDetail}
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm"
+                  >
+                    <FaPlus /> Add New Detail
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Quantity</th>
+                        <th className="px-4 py-2 text-left">Weight/Unit</th>
+                        <th className="px-4 py-2 text-left">Cost/Unit</th>
+                        <th className="px-4 py-2 text-left">Packaging</th>
+                        <th className="px-4 py-2 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                      {isLoadingGoods && <LoaderIcon />}
+                      {!isLoadingGoods &&
+                        selectedItems[currentItem.id]?.map((detail, index) => (
+                          <tr key={detail.id || index}>
+                            <td className="px-4 py-2">{detail.quantity}</td>
+                            <td className="px-4 py-2">
+                              {detail.weightPerUnit} kg
+                            </td>
+                            <td className="px-4 py-2">
+                              {detail.commodityPerUnitCost}
+                            </td>
+                            <td className="px-4 py-2">
+                              {detail.packaging?.name || "N/A"}
+                            </td>
+                            <td className="px-4 py-2 flex gap-2">
+                              <button
+                                onClick={() => handleEditDetail(index)}
+                                className="text-blue-500 hover:text-blue-700"
+                                title="Edit"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDetail(detail.id)}
+                                className="text-red-500 hover:text-red-700"
+                                title="Delete"
+                              >
+                                <FaTrash />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-4 pt-4 border-t dark:border-gray-700">
+                <button
+                  onClick={() => setShowDetailsView(false)}
+                  className="bg-gray-300 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
         {/* Detail Input Modal */}
         {showDetailInput && (
           <motion.div
-            className="fixed inset-0 h-full bg-black bg-opacity-50 flex items-center justify-center"
+            className="fixed inset-0 h-full bg-black bg-opacity-50 flex items-center justify-center z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -459,10 +608,20 @@ export default function ItemSelectionPage() {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
             >
-              <div className="flex-1 overflow-y-auto pr-2">
-                <h3 className="text-lg font-semibold mb-4">
-                  Enter Detail for {currentItem?.name}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  {currentDetailIndex !== null ? "Edit" : "Add"} Detail for{" "}
+                  {currentItem?.name}
                 </h3>
+                <button
+                  onClick={handleCancel}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2">
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200">
                   <p className="font-medium">✏️ Flexible Data Entry</p>
                   <p>Fill in what you have now; update the remaining later!</p>
@@ -544,32 +703,22 @@ export default function ItemSelectionPage() {
                     </option>
                   </select>
                 </div>
-                {/* Note Section */}
               </div>
 
-              {/* Buttons Section - Always Visible */}
               <div className="flex justify-end space-x-2 mt-4 pt-4 border-t dark:border-gray-700">
-                {/* <button
-                  onClick={handleSkip}
-                  className="bg-gray-300 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+                <button
+                  onClick={handleCancel}
+                  className="bg-CancelButton hover:bg-CancelButtonHover text-white px-4 py-2 rounded-md"
                 >
-                  Skip for Now
-                </button> */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCancel}
-                    className="bg-CancelButton hover:bg-CancelButtonHover text-white px-4 py-2 rounded-md"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleItemDetail}
-                    className="bg-PrimaryButton hover:bg-PrimaryButtonHover transition text-white px-4 py-2 rounded-md"
-                    disabled={submitLoading}
-                  >
-                    {submitLoading ? "Saving..." : "Save"}
-                  </button>
-                </div>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleItemDetail}
+                  className="bg-PrimaryButton hover:bg-PrimaryButtonHover transition text-white px-4 py-2 rounded-md"
+                  disabled={submitLoading}
+                >
+                  {submitLoading ? "Saving..." : "Save"}
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -585,12 +734,6 @@ export default function ItemSelectionPage() {
             </Link>
           )}
           <div className="flex gap-4">
-            {/* <motion.button
-              onClick={() => router.back()}
-              className="bg-CancelButton hover:bg-CancelButtonHover transition-all text-white px-4 sm:px-6 py-2 rounded-md"
-            >
-              Cancel
-            </motion.button> */}
             <motion.button
               onClick={handleSave}
               className="bg-PrimaryButton flex items-center gap-2 hover:bg-PrimaryButtonHover transition-all text-white px-4 sm:px-6 py-2 rounded-md"

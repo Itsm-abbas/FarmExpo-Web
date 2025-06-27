@@ -69,21 +69,19 @@ export default function Packaging() {
         throw new Error("Failed to save data");
       }
 
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "packaging updated successfully."
-          : "packaging added successfully.",
-      });
-      if (result.isConfirmed) {
-        router.push("view-packaging");
+      if (response.status === 200) {
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (!id) {
+          setName("");
+          setPackagingWeightPerUnit("");
+        } // Clear form for new entry
       }
-
-      if (!id) {
-        setName("");
-        setPackagingWeightPerUnit("");
-      } // Clear form for new entry
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -113,7 +111,7 @@ export default function Packaging() {
         <Input
           id={"packagingWeightPerUnit"}
           type="text"
-          placeholder="Enter Packaging Weight Per Unit Cost"
+          placeholder="Enter Packaging Weight Per Unit"
           value={packagingWeightPerUnit}
           onChange={(e) => setPackagingWeightPerUnit(e.target.value)}
         />

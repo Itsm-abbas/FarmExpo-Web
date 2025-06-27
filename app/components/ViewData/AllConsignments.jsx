@@ -9,14 +9,18 @@ import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import { fetchConsignments } from "@constants/consignmentAPI";
 import axiosInstance from "@utils/axiosConfig";
+import * as XLSX from "xlsx";
+import { FaPrint } from "react-icons/fa";
 
 export default function AllConsignments() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [filters, setFilters] = useState({
-    date: "",
+    fromDate: "",
+    toDate: "",
     status: "",
     search: "",
+    searchType: "consignee", // Default to search by consignee
   });
 
   const { isLoading, error, data } = useQuery({
@@ -28,20 +32,75 @@ export default function AllConsignments() {
   if (error) return "An error has occurred: " + error.message;
 
   const filteredData = data?.filter((item) => {
-    const matchesDate = filters.date
-      ? Formatter.format(new Date(item.date)) ===
-        Formatter.format(new Date(filters.date))
-      : true;
+    const itemDate = new Date(item.date);
+    const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
+    const toDate = filters.toDate ? new Date(filters.toDate) : null;
+
+    // Date range filter
+    const matchesDateRange =
+      (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
+
+    // Status filter
     const matchesStatus = filters.status
       ? item.status === filters.status
       : true;
-    const matchesSearch = filters.search
-      ? item.consignee?.name
-          .toLowerCase()
-          .includes(filters.search.toLowerCase())
-      : true;
-    return matchesDate && matchesStatus && matchesSearch;
+
+    // Search filter
+    let matchesSearch = true;
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      switch (filters.searchType) {
+        case "gd":
+          matchesSearch = item.goodsDeclaration?.number
+            ?.toLowerCase()
+            .includes(searchTerm);
+          break;
+        case "airwaybill":
+          matchesSearch = item.airwayBill?.number
+            ?.toLowerCase()
+            .includes(searchTerm);
+          break;
+        default: // consignee
+          matchesSearch = item.consignee?.name
+            ?.toLowerCase()
+            .includes(searchTerm);
+      }
+    }
+
+    return matchesDateRange && matchesStatus && matchesSearch;
   });
+
+  // Excel export function
+  const exportToExcel = () => {
+    if (!filteredData || filteredData.length === 0) {
+      Swal.fire("No Data", "There's no data to export", "info");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredData.map((item) => ({
+        Date: item?.goodsDeclaration?.date,
+        "Invoice No": item?.goodsDeclaration?.commercialInvoiceNumber,
+        Commodity:
+          item?.goods.length > 1 ? "Mix Veg" : item?.goods[0]?.item.name,
+        "AWB/BL NO": item?.airwayBill?.number,
+        "Container NO": "",
+        "Local Invoice PKR": "",
+        Sale: item?.recoveryDone?.amount,
+        Currency: item?.recoveryDone?.currency,
+        "Exchange Rate": item?.recoveryDone?.exchangeRate,
+        "Total Value": "",
+        "P/L": "",
+        Status: item?.status,
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Consignments");
+    XLSX.writeFile(
+      workbook,
+      `Consignments_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+  };
 
   const deleteConsignmentMutation = useMutation({
     mutationFn: async (id) => {
@@ -88,30 +147,82 @@ export default function AllConsignments() {
       <div className="flex flex-col gap-8">
         <h1 className="text-2xl sm:text-3xl font-bold">All Consignments</h1>
 
-        {/* Filter Section */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <input
-            type="date"
-            value={filters.date}
-            onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-            className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none flex-1"
-          />
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none flex-1"
+        {/* Enhanced Filter Section */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              <input
+                type="date"
+                placeholder="From Date"
+                value={filters.fromDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, fromDate: e.target.value })
+                }
+                className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none"
+              />
+              <input
+                type="date"
+                placeholder="To Date"
+                value={filters.toDate}
+                onChange={(e) =>
+                  setFilters({ ...filters, toDate: e.target.value })
+                }
+                className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none"
+              />
+            </div>
+
+            <select
+              value={filters.status}
+              onChange={(e) =>
+                setFilters({ ...filters, status: e.target.value })
+              }
+              className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none flex-1"
+            >
+              <option value="">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Fulfilled">Fulfilled</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <select
+              value={filters.searchType}
+              onChange={(e) =>
+                setFilters({ ...filters, searchType: e.target.value })
+              }
+              className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none"
+            >
+              <option value="consignee">Search by Consignee</option>
+              <option value="gd">Search by GD Number</option>
+              <option value="airwaybill">Search by Airway Bill</option>
+            </select>
+
+            <input
+              type="text"
+              placeholder={`Search by ${
+                filters.searchType === "gd"
+                  ? "GD Number"
+                  : filters.searchType === "airwaybill"
+                  ? "Airway Bill"
+                  : "Consignee"
+              }`}
+              value={filters.search}
+              onChange={(e) =>
+                setFilters({ ...filters, search: e.target.value })
+              }
+              className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none flex-1"
+            />
+          </div>
+        </div>
+
+        {/* Export Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={exportToExcel}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
           >
-            <option value="">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Fulfilled">Fulfilled</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Search by consignee"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            className="p-2 border rounded dark:bg-DarkSBg dark:border-DarkBorder focus-within:outline-none flex-1"
-          />
+            Export to Excel
+          </button>
         </div>
 
         {/* Table Section */}
@@ -123,19 +234,24 @@ export default function AllConsignments() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <table className="w-full min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden ">
+            <table className="w-full min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden">
               <thead>
                 <tr className="bg-PrimaryButton text-white">
-                  {["No", "Consignee", "Status", "Actions"].map(
-                    (item, index) => (
-                      <th
-                        key={index}
-                        className="px-3 sm:px-6 md:px-8 py-2 border border-LightBorder dark:border-DarkBorder text-center"
-                      >
-                        {item}
-                      </th>
-                    )
-                  )}
+                  {[
+                    "No",
+                    "Date",
+                    "Consignee",
+                    "Destination",
+                    "Status",
+                    "Actions",
+                  ].map((item, index) => (
+                    <th
+                      key={index}
+                      className="px-3 sm:px-6 md:px-8 py-2 border border-LightBorder dark:border-DarkBorder text-center"
+                    >
+                      {item}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -152,7 +268,13 @@ export default function AllConsignments() {
                         {index + 1}
                       </td>
                       <td className="border border-LightBorder dark:border-DarkBorder sm:px-4 py-1 sm:py-2 text-center">
-                        {item?.consignee?.name}
+                        {item?.date}
+                      </td>
+                      <td className="border border-LightBorder dark:border-DarkBorder sm:px-4 py-1 sm:py-2 text-center">
+                        {item.consignee?.name}
+                      </td>
+                      <td className="border border-LightBorder dark:border-DarkBorder sm:px-4 py-1 sm:py-2 text-center">
+                        {item?.consignee?.address}
                       </td>
                       <td className="border border-LightBorder dark:border-DarkBorder sm:px-4 py-1 sm:py-2 text-center">
                         <span
@@ -169,6 +291,12 @@ export default function AllConsignments() {
                       </td>
                       <td className="border border-LightBorder dark:border-DarkBorder sm:px-4 py-1 sm:py-2 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => router.push(`/invoice/${item.id}`)}
+                            className="p-1 sm:p-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition text-base sm:text-lg"
+                          >
+                            <FaPrint />
+                          </button>
                           <button
                             onClick={() =>
                               router.push(`/startconsignment/${item?.id}`)
@@ -189,8 +317,8 @@ export default function AllConsignments() {
                   ))
                 ) : (
                   <tr className="text-center">
-                    <td colSpan="4" className="py-4 text-gray-500">
-                      No consignments found
+                    <td colSpan="6" className="py-4 text-gray-500">
+                      No consignments found matching your filters
                     </td>
                   </tr>
                 )}

@@ -53,31 +53,30 @@ export default function FinancialInstrumentForm() {
       return await axiosInstance.post(`/financialinstrument`, newData);
     },
     onSuccess: async () => {
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "Financial instrument updated successfully."
-          : "Financial instrument added successfully.",
-      });
-      if (result.isConfirmed) {
-        router.push("view-financial-instrument");
-      }
-      if (!id) {
-        setFormData({
-          number: "",
-          trader: "",
-          mode: "",
-          consignee: "",
-          currency: "",
-          localDate: "",
-          expiryDate: "",
-          status: "",
-          amount: "",
-          balance: "",
-          iban: "",
-          deliveryTerm: "",
+      if (response.ok) {
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
         });
+        if (!id) {
+          setFormData({
+            number: "",
+            trader: "",
+            mode: "",
+            consignee: "",
+            currency: "",
+            localDate: "",
+            expiryDate: "",
+            status: "",
+            amount: "",
+            balance: "",
+            iban: "",
+            deliveryTerm: "",
+          });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["financialInstruments"] });

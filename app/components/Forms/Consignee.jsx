@@ -20,8 +20,12 @@ export default function ConsigneeForm() {
 
   const [formData, setFormData] = useState({
     name: "",
+    ntn: "",
     address: "",
     country: "",
+    station: "",
+    balance: 0,
+    currency: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -76,18 +80,18 @@ export default function ConsigneeForm() {
       if (!response.ok) {
         throw new Error(`Error: ${response.status} - ${response.statusText}`);
       }
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "Consignee updated successfully."
-          : "Consignee added successfully.",
-      });
+
       if (response.ok) {
-        setFormData({ name: "", address: "", country: "" }); // Clear form for new entry
-      }
-      if (result.isConfirmed) {
-        router.push("view-consignee");
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (!id) {
+          setFormData({ name: "", address: "", country: "" }); // Clear form for new entry
+        }
       }
     } catch (error) {
       console.error(error);
@@ -114,6 +118,16 @@ export default function ConsigneeForm() {
             placeholder="Enter name"
             label="Name*"
           />
+        </div>{" "}
+        <div>
+          <Input
+            id="ntn"
+            type="text"
+            value={formData.ntn}
+            onChange={(e) => setFormData({ ...formData, ntn: e.target.value })}
+            placeholder="Enter ntn"
+            label="Ntn*"
+          />
         </div>
         <div>
           <Input
@@ -137,6 +151,42 @@ export default function ConsigneeForm() {
             }
             placeholder="Enter country"
             label="Country*"
+          />
+        </div>{" "}
+        <div>
+          <Input
+            id="station"
+            type="text"
+            value={formData.station}
+            onChange={(e) =>
+              setFormData({ ...formData, station: e.target.value })
+            }
+            placeholder="Enter station"
+            label="Station*"
+          />
+        </div>
+        <div>
+          <Input
+            id="balance"
+            type="number"
+            value={formData.balance}
+            onChange={(e) =>
+              setFormData({ ...formData, balance: e.target.value })
+            }
+            placeholder="Enter balance"
+            label="Balance*"
+          />
+        </div>
+        <div>
+          <Input
+            id="currency"
+            type="text"
+            value={formData.currency}
+            onChange={(e) =>
+              setFormData({ ...formData, currency: e.target.value })
+            }
+            placeholder="Enter currency"
+            label="Currency*"
           />
         </div>
         <SaveButton

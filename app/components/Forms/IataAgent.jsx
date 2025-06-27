@@ -48,21 +48,19 @@ export default function IataAgent() {
         throw new Error("Failed to save data");
       }
 
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "Iata Agent updated successfully."
-          : "Iata Agent added successfully.",
-      });
-      if (result.isConfirmed) {
-        router.push("view-iataAgent");
-      }
-
       if (response.ok) {
-        setName("");
-        setStation("");
-      } // Clear form for new entry
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (response.ok) {
+          setName("");
+          setStation("");
+        } // Clear form for new entry
+      }
     } catch (error) {
       Swal.fire({
         icon: "error",

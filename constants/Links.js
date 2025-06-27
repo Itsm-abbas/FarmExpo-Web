@@ -90,19 +90,19 @@ const SidebarLinks = [
       },
     ],
   },
-  {
-    name: "Consignment Item",
-    links: [
-      {
-        name: "Add Consignment Item",
-        href: "/consignment/consignmentitem/add-consignmentitem",
-      },
-      {
-        name: "View Consignment Item",
-        href: "/consignment/consignmentitem/view-consignmentitem",
-      },
-    ],
-  },
+  // {
+  //   name: "Consignment Item",
+  //   links: [
+  //     {
+  //       name: "Add Consignment Item",
+  //       href: "/consignment/consignmentitem/add-consignmentitem",
+  //     },
+  //     {
+  //       name: "View Consignment Item",
+  //       href: "/consignment/consignmentitem/view-consignmentitem",
+  //     },
+  //   ],
+  // },
   {
     name: "Financial instrument",
     links: [

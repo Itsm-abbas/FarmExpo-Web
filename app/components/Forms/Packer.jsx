@@ -68,21 +68,19 @@ export default function Packer() {
         throw new Error("Failed to save data");
       }
 
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "packer updated successfully."
-          : "packer added successfully.",
-      });
-      if (result.isConfirmed) {
-        router.push("view-packer");
+      if (response.ok) {
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (!id) {
+          setName("");
+          setStation("");
+        } // Clear form for new entry
       }
-
-      if (!id) {
-        setName("");
-        setStation("");
-      } // Clear form for new entry
     } catch (error) {
       Swal.fire({
         icon: "error",

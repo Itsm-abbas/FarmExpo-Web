@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DataLoader from "@components/Loader/dataLoader";
 import Swal from "sweetalert2";
 import { useEffect, useState } from "react";
-import { FaArrowRight, FaEye, FaWindowClose } from "react-icons/fa";
+import { FaArrowRight, FaEye, FaPrint, FaWindowClose } from "react-icons/fa";
 import fonts from "@utils/fonts";
 import { MdDelete, MdEdit, MdVisibility } from "react-icons/md";
 import { AnimatePresence, motion } from "framer-motion";
@@ -142,7 +142,7 @@ export default function Home() {
 
   return (
     <motion.div
-      className="py-24"
+      className="py-24 "
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -195,16 +195,16 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex flex-col md:flex-row gap-24 md:gap-8 md:justify-between">
+      <div className="flex flex-col md:flex-row gap-20 md:gap-8 md:justify-between">
         {/* Left Section */}
         <motion.div
-          className="flex flex-col  items-start space-y-10 md:py-10"
+          className="flex flex-col  items-start space-y-10 md:py-10 "
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <h1 className="text-3xl sm:text-3xl md:text-5xl font-bold gap-2 flex flex-wrap">
-            <motion.span>{greeting}!</motion.span>{" "}
+            <motion.span>{greeting}!</motion.span>
             <motion.span
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
@@ -226,11 +226,11 @@ export default function Home() {
               </>
             ) : (
               "Start New Consignment"
-            )}{" "}
+            )}
             {!startConsignmentMutation.isPending && <FaArrowRight />}
           </motion.button>
           <motion.button
-            // onClick={() => router.push("/selectLedger")}
+            onClick={() => router.push("/selectLedger")}
             className={`${fonts.poppins.className} cursor-pointer text-sm sm:text-base flex gap-2 items-center px-3 sm:px-5 py-2 bg-SecondaryButton hover:bg-SecondaryButtonHover text-white rounded-lg transition`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -253,23 +253,28 @@ export default function Home() {
 
           {!isLoading && (
             <motion.table
-              className="w-full mb-4 min-w-max text-xs sm:text-sm md:text-base border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-md dark:shadow-xl"
+              className="w-full mb-4 min-w-max text-xs sm:text-sm 2xl:text-lg border-collapse border border-LightBorder dark:border-DarkBorder capitalize rounded-lg overflow-hidden shadow-md dark:shadow-xl "
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
             >
               <thead>
                 <tr className="bg-PrimaryButton text-white">
-                  {["No", "Consignee", "Status", "Actions"].map(
-                    (item, index) => (
-                      <th
-                        key={index}
-                        className="px-3 sm:px-6 md:px-8 py-2 border border-LightBorder dark:border-DarkBorder text-center"
-                      >
-                        {item}
-                      </th>
-                    )
-                  )}
+                  {[
+                    "No",
+                    "Date",
+                    "Destination",
+                    "Consignee",
+                    "Status",
+                    "Actions",
+                  ].map((item, index) => (
+                    <th
+                      key={index}
+                      className="px-3 2xl:px-5 sm:px-6 md:px-4 py-2 border border-LightBorder dark:border-DarkBorder text-center"
+                    >
+                      {item}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -289,7 +294,13 @@ export default function Home() {
                           {index + 1}
                         </td>
                         <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
-                          {item?.consignee?.name}
+                          {item?.date}
+                        </td>
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
+                          {item?.consignee?.address}
+                        </td>
+                        <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
+                          {item?.consigneeName}
                         </td>
                         <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-center">
                           <span
@@ -307,14 +318,20 @@ export default function Home() {
                         <td className="border border-LightBorder dark:border-DarkBorder  sm:px-4 py-2 text-cente">
                           <div className="flex items-center justify-center gap-1">
                             <button
+                              onClick={() => router.push(`/invoice/${item.id}`)}
+                              className="p-1 2xl:p-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition text-lg"
+                            >
+                              <FaPrint />
+                            </button>
+                            <button
                               onClick={() => handleEdit(item?.id)}
-                              className="p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-lg"
+                              className="p-1 2xl:p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition text-lg"
                             >
                               <MdEdit />
                             </button>
                             <button
                               onClick={() => handleDelete(item.id)}
-                              className="p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition text-lg"
+                              className="p-1 2xl:p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition text-lg"
                             >
                               <MdDelete />
                             </button>

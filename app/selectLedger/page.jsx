@@ -2,16 +2,23 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { getCookie } from "cookies-next";
 
 export default function LedgerSelection() {
   const router = useRouter();
   const [consignments, setConsignments] = useState([]);
-
+  const token = getCookie("token");
   useEffect(() => {
     // Fetch consignments (Replace with API call if needed)
     const fetchConsignments = async () => {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/consignment`
+        `${process.env.NEXT_PUBLIC_API_URL}/consignment`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const data = await response.json();
       setConsignments(data);

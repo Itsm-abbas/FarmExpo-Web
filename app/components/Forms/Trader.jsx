@@ -79,18 +79,16 @@ export default function TraderForm() {
         throw new Error("Failed to save data");
       }
 
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "Trader updated successfully."
-          : "Trader added successfully.",
-      });
-      if (result.isConfirmed) {
-        router.push("view-trader");
+      if (response.ok) {
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (!id) setFormData({ ntn: "", name: "", address: "", country: "" }); // Clear form for new entry
       }
-
-      if (!id) setFormData({ ntn: "", name: "", address: "", country: "" }); // Clear form for new entry
     } catch (error) {
       Swal.fire({
         icon: "error",

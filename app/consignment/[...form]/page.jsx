@@ -25,6 +25,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import AllConsignments from "@components/ViewData/AllConsignments";
 import FinancialInstrumentForm from "@components/Forms/FinancialInstrument";
 import ViewFI from "@components/ViewData/Financialinstrument";
+import { motion } from "framer-motion";
 // Add other imports here...
 
 export default function DynamicConsignmentPage() {
@@ -47,8 +48,8 @@ export default function DynamicConsignmentPage() {
     "packaging/view-packaging": ViewPackaging,
     "trader/add-trader": TraderForm,
     "trader/view-trader": ViewTrader,
-    "consignmentitem/add-consignmentitem": ConsignmentItemForm,
-    "consignmentitem/view-consignmentitem": ViewConsignmentItem,
+    // "consignmentitem/add-consignmentitem": ConsignmentItemForm,
+    // "consignmentitem/view-consignmentitem": ViewConsignmentItem,
     "add-financialinstrument": FinancialInstrumentForm,
     "view-financial-instrument": ViewFI,
 
@@ -71,12 +72,15 @@ export default function DynamicConsignmentPage() {
   return (
     <div className="relative w-full h-full flex flex-col justify-center items-center py-20">
       <div className="absolute top-5 left-0 sm:left-10 md:left-28 lg:left-40">
-        <button
+        <motion.button
           onClick={() => router.back()}
-          className=" flex justify-center items-center gap-2 bg-trasparent  px-4 py-2 rounded-md border border-LightBorder dark:border-DarkBorder hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          className="group flex items-center gap-2 px-5 py-2 rounded-lg border border-LightBorder dark:border-DarkBorder bg-white dark:bg-DarkSBg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base font-medium shadow-md transition-all duration-300"
         >
-          <FaArrowLeft /> Back
-        </button>
+          <FaArrowLeft className="text-lg group-hover:-translate-x-1 transition-transform duration-300" />
+          <span>Back</span>
+        </motion.button>
       </div>
       {FormComponent && <FormComponent />}
     </div>

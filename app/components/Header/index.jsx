@@ -104,12 +104,19 @@ export default function Header() {
           <AnimatePresence>
             {isDropdownOpen && (
               <motion.div
-                className="absolute right-0 top-10 md:top-14 bg-white dark:bg-DarkSBg shadow-lg rounded-md w-36 md:w-48 p-1 md:p-2 text-black dark:text-white"
+                className="absolute right-0 capitalize top-10 md:top-14 bg-white dark:bg-DarkSBg shadow-lg rounded-md w-36 md:w-48 p-1 md:p-2 text-black dark:text-white"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
+                <Link
+                  onClick={() => setIsDropdownOpen(false)}
+                  href="/profile/add-user"
+                  className="block px-2 md:px-4 py-1 md:py-2 hover:bg-LightPBg dark:hover:bg-DarkPBg rounded-md"
+                >
+                  Add user
+                </Link>
                 <Link
                   onClick={() => setIsDropdownOpen(false)}
                   href="/profile"

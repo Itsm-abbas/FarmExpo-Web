@@ -68,19 +68,17 @@ export default function CommodityForm() {
         throw new Error("Failed to save data");
       }
 
-      const result = await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: id
-          ? "Commodity updated successfully."
-          : "Commodity added successfully.",
-      });
-
-      if (result.isConfirmed) {
-        router.push("view-commodity");
-      }
       if (response.ok) {
-        setFormData({ number: "", name: "" });
+        Swal.fire({
+          position: "top-center",
+          icon: "success",
+          title: id ? "Updated successfully." : "Added successfully.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        if (!id) {
+          setFormData({ number: "", name: "" });
+        }
       }
     } catch (error) {
       Swal.fire({

@@ -45,17 +45,18 @@ const Invoice = () => {
     setGrossWeight(totalNetWeight + totalTareWeight);
     //CFR
     const totalcfr =
-      consignment?.goodsDeclaration.fob +
-      consignment?.goodsDeclaration.gdFreight;
+      consignment?.goodsDeclaration?.fob +
+      consignment?.goodsDeclaration?.gdFreight;
     setCFR(totalcfr);
     // Total AirwayBill
     const totalA =
-      consignment?.airwayBill.rate * consignment?.airwayBill.airwayBillWeight +
-      consignment?.airwayBill.fee;
+      consignment?.airwayBill?.rate *
+        consignment?.airwayBill?.airwayBillWeight +
+      consignment?.airwayBill?.fee;
     setTotalAirwayBill(totalA);
     // Total Packing Rate
     const totalPackging =
-      consignment?.airwayBill.airwayBillWeight *
+      consignment?.airwayBill?.airwayBillWeight *
       consignment?.packing?.ratePerKg;
     setTotalPackingAmount(totalPackging);
 
@@ -81,7 +82,7 @@ const Invoice = () => {
     }, 0);
     setTotalPackagingCost(totalPackaging);
     // Custom Fee
-    setCustomFee(consignment?.customClearance.fee);
+    setCustomFee(consignment?.customClearance?.fee);
   }, [consignment]); // Runs only when `consignment` changes
 
   // Fetch consignment and FIU data
@@ -132,6 +133,21 @@ const Invoice = () => {
 
   const { totalWeight, totalAmount } = calculateTotals();
 
+  const calculateFiuUtilize = () => {
+    if (!fiuData || !Array.isArray(fiuData)) return 0;
+    return fiuData.reduce((total, fiu) => total + (fiu.utilized || 0), 0);
+  };
+
+  const totalutilize = calculateFiuUtilize();
+
+  let grandTotal =
+    totalRecovery -
+    (totalAirwayBill +
+      totalPackagingCost +
+      totalGoodsAmount +
+      totalPackingAmount +
+      dailyExpenses +
+      customFee);
   // To excel
   const exportToExcel = () => {
     if (!consignment) return;
@@ -472,8 +488,8 @@ const Invoice = () => {
         { v: `${netWeight} kg`, t: "s" },
         "",
         "",
-        { v: "Currency:", t: "s", s: { font: { bold: true } } },
-        { v: consignment?.recoveryDone?.currency, t: "s" },
+        { v: "Amount:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.recoveryDone?.amount, t: "s" },
         "",
         "",
       ],
@@ -482,8 +498,8 @@ const Invoice = () => {
         { v: `${tareWeight} kg`, t: "s" },
         "",
         "",
-        { v: "Exchange Rate:", t: "s", s: { font: { bold: true } } },
-        { v: consignment?.recoveryDone?.exchangeRate, t: "s" },
+        { v: "Currency:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.recoveryDone?.currency, t: "s" },
         "",
         "",
       ],
@@ -492,8 +508,8 @@ const Invoice = () => {
         { v: `${grossWeight} kg`, t: "s" },
         "",
         "",
-        "",
-        "",
+        { v: "Exchange Rate:", t: "s", s: { font: { bold: true } } },
+        { v: consignment?.recoveryDone?.exchangeRate, t: "s" },
         "",
         "",
       ],
@@ -510,6 +526,21 @@ const Invoice = () => {
       [
         { v: "Status:", t: "s", s: { font: { bold: true } } },
         { v: consignment?.status, t: "s" },
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [""], // Spacer
+      [
+        {
+          v: grandTotal > 0 ? "Profit" : "Loss",
+          t: "s",
+          s: { font: { bold: true } },
+        },
+        { v: Math.abs(grandTotal).toLocaleString(), t: "s" },
         "",
         "",
         "",
@@ -881,7 +912,7 @@ const Invoice = () => {
                   <span className="font-semibold">Fee:</span>
                   {consignment?.airwayBill?.fee?.toLocaleString()}
                 </p>
-                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                <p className="mt-3  p-1 bg-gray-200 dark:bg-gray-600 font-semibold flex justify-between">
                   <span>Total</span>
                   {totalAirwayBill?.toLocaleString()}
                 </p>
@@ -913,7 +944,7 @@ const Invoice = () => {
                   <span className="font-semibold">GD Freight:</span>
                   {consignment?.goodsDeclaration?.gdFreight}
                 </p>{" "}
-                <p className="mt-3 flex justify-between p-1 bg-gray-200 font-semibold">
+                <p className="mt-3 flex justify-between p-1 bg-gray-200 dark:bg-gray-600 dark:text-white font-semibold">
                   <span>CFR</span>
                   {CFR.toLocaleString()}
                 </p>
@@ -944,7 +975,7 @@ const Invoice = () => {
                   <span className="font-semibold">Custom Agent Station:</span>
                   {consignment?.customClearance?.ca?.station}
                 </p>
-                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                <p className="mt-3  p-1 bg-gray-200 dark:bg-gray-600 font-semibold flex justify-between">
                   <span>Fee</span>
                   {consignment?.customClearance?.fee?.toLocaleString()}
                 </p>
@@ -962,7 +993,7 @@ const Invoice = () => {
                   <span className="font-semibold">Rate per Kg:</span>
                   {consignment?.packing?.ratePerKg}
                 </p>
-                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                <p className="mt-3  p-1 bg-gray-200 dark:bg-gray-600 dark:text-white font-semibold flex justify-between">
                   <span>Total</span>
                   {totalPackingAmount}
                 </p>
@@ -1020,6 +1051,14 @@ const Invoice = () => {
                     </td>
                   </tr>
                 ))}
+                {/* Total Row */}
+                <tr className="bg-gray-100 dark:bg-gray-600 dark:text-white font-semibold">
+                  <td className="p-2">TOTAL</td>
+                  <td className="p-2"></td>
+                  <td className="p-2">{totalutilize.toLocaleString()}</td>
+                  <td className="p-2"></td>
+                  <td className="p-2"></td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1096,7 +1135,7 @@ const Invoice = () => {
                 );
               })}
               {/* Total Row */}
-              <tr className="bg-gray-100 dark:bg-gray-700 font-semibold">
+              <tr className="bg-gray-100 dark:bg-gray-600 dark:text-white font-semibold">
                 <td className="p-2">TOTAL</td>
                 <td className="p-2"></td>
                 <td className="p-2"></td>
@@ -1204,7 +1243,7 @@ const Invoice = () => {
                     {consignment?.status}
                   </span>
                 </p>
-                <p className="mt-3  p-1 bg-gray-200 font-semibold flex justify-between">
+                <p className="mt-3  p-1 bg-gray-200 dark:bg-gray-600 dark:text-white font-semibold flex justify-between">
                   <span>Total Cost</span>
                   {(
                     totalAirwayBill +
@@ -1229,7 +1268,7 @@ const Invoice = () => {
                   <span className="font-semibold">Exchange Rate:</span>
                   {consignment?.recoveryDone?.exchangeRate}
                 </p>
-                <p className="mt-3 p-1 flex justify-between  bg-gray-200 font-bold">
+                <p className="mt-3 p-1 flex justify-between  bg-gray-200 dark:bg-gray-600 dark:text-white font-bold">
                   <span>Total Recovery :</span>{" "}
                   {totalRecovery?.toLocaleString()}
                 </p>
@@ -1237,19 +1276,9 @@ const Invoice = () => {
             </tr>
           </tbody>
         </table>
-        <h1 className="w-full font-bold flex gap-4 justify-center items-center p-2 bg-gray-200">
-          <span>Grand Total (Recovery - Total Cost) = </span>
-          <span>
-            {(
-              totalRecovery -
-              (totalAirwayBill +
-                totalPackagingCost +
-                totalGoodsAmount +
-                totalPackingAmount +
-                dailyExpenses +
-                customFee)
-            ).toLocaleString()}
-          </span>
+        <h1 className="w-full font-bold flex gap-4 justify-center items-center p-2 bg-gray-200 dark:bg-gray-600 dark:text-white">
+          <span>{grandTotal > 0 ? "Profit" : "Loss"} =</span>
+          <span>{Math.abs(grandTotal).toLocaleString()}</span>
         </h1>
         {/* <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           Invoice generated on: {moment().format("MMMM Do YYYY, h:mm:ss a")}
